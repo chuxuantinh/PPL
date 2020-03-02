@@ -1,0 +1,406 @@
+- Names, Variables (Section 5.1,5.2,5.3)
+- Expressions and assignments (chapter 7)
+- Storage binding (Section 5.4.3)
+
+=====================================================================
+* Names:
+=====================================================================
+
+- Names are associated to program constructs (labels, subprograms,
+  variables, formal parameters, etc.)
+   
+- some languages impose a length limit:
+  - earlier languages: 1 character
+  - FORTRAN I: 6 characters
+  - Ada: 200 characters
+  - C89: no limit, but only first 31 were significant
+  - C++: implementation dependent
+
+- case-sensitive names is by now considered a good thing by most
+
+- Special words (for, while, ..)
+  - keywords: special only in certain contexts
+     
+     FORTRAN:   REAL INTEGER
+                INTEGER REAL
+
+ - reserved words: cannot be used as names 
+      (known to be better by now)
+
+=====================================================================
+* Variables:
+=====================================================================
+
+- a variable is a 6-tuple:
+   - Name
+   - Address  (l-value: LHS of an assignment)
+   - Value    (r-value: RHS of an assignment)
+   - Type
+   - Lifetime   
+   - Scope      (will discuss in future lectures)
+
+=============================================================
+* Expression and Assignments
+=============================================================
+
+
+* Operand evaluation order matters
+
+  - Example:
+
+	int f1(int *x) {
+ 	  (*x)++;
+ 	  return *x;    
+	}
+	
+	int f2(int *x) {
+ 	  (*x) *= (*x);
+ 	  return *x;
+	}
+	
+	
+	int main() {
+  	  int a = 1;
+	
+  	  printf("%d\n",f2(&a) + f1(&a));
+	} 
+
+    left-to-right:  
+
+	   f2: set a to 1;
+               return 1 
+
+           f1: set a to 2
+               return 2;
+
+          print 3
+
+    right-to-left:
+
+           f1: set a to 2
+               return 2
+       
+           f2: set a to 4
+               return 4
+
+           print 6
+
+  - This happens only because functions f1 and f2 have side-effects
+        function changes a global variable or its parameters
+
+  - Solution:
+     1. Disallow side effects
+          - eliminates a lot of convenient flexibility
+	  - removing global variables causes major speed problems
+     2. Strict evaluation order
+          precludes some compiler optimizations
+
+    - No perfect solution
+    - Pascal, Ada, Scheme:  language implementors can do whatever they want
+
+  - Other example:
+
+       x = 1;
+       x += (x=2);
+
+       3 possibilities:
+
+          x = 2;
+	  oldx = x;
+	  x = oldx + 2;   --> 4
+
+          oldx = x;
+	  x = 2;
+	  x = oldx + 2;   --> 3
+
+	  oldx = x;
+	  x = oldx + 2;
+	  x = 2; ---> 2;
+
+    - Java: semantics enforce second order --> 3
+    - C: implementation-dependent  (on my laptop: returns 4)
+  - Rule of thumb: When in doubt, use temporary variables!
+
+* Assignment statements
+  - The code in the last example above worked because "assignment" is an operator:
+	x = 1:   return 1 and, as a "side effect"
+	         assign value 1 to variable x. 
+  - makes it possible to write compact loops:
+      while ((ch = getchar()) != EOF) {  }  // reads a file
+      
+      void strcpy(char *q, char *p) {  // copies a string into another
+        while (*q++ = *p++);
+      }
+
+  - makes it possible to define associativity
+
+      a = b = 0;   (right associativity)
+          (a = (b = 0)): means something
+	  ((a = b) = 0): means nothing
+
+  - cause of error in C/C++:  if (x = y)       instead of        if (x == y)
+         (lint can be used to detect this)
+  - Java solves this:  only allows boolean expressions.
+  
+
+* Short-circuit evaluation  
+  - An expression in which the result is determined without evaluating
+    all of the operands
+    - goal: efficiency
+
+  - Example:
+     (x - 4) * (b * 2)?
+     if x = 4, one already knows that the expression evaluates to 0
+
+     (a >= 0) and (b < 10)
+     if a < 0, evaluates to false
+
+     (a >= 0) or (b < 10)
+     if a >= 0, evaluates to true
+
+  - Java example:
+      index = 1;
+      while ((index < listlen) && (list[index] <> key))
+        index++;
+
+      - if no short-circuit, both are evaluated, which causes an exception
+        because list[listlen] is evaluated!
+
+  - Short circuit evaluation exposes the problem of side-effects:
+      (a > b)  || (b++ / 3)
+        - if (a>b) then b++ is never evaluated and b's value does not change
+        - if (a<=b) then b++ is evaluated and b's value changes
+        - a programmer may forget and assume that b will always be incremented!
+        - Can be worse
+          - instead of b++ one has a function call that modifies
+            some "unrelated" global variable.
+
+  - Ada makes it explicit: "and then"   "or else"
+  - In C, Java:  && and || are short-circuited
+  - Common Lisp does short-circuit
+
+
+=====================================================================
+* Binding:
+=====================================================================
+
+- Binding: general notion of an association between two entities
+
+- In the context of PLs, binding can take place at:
+  - language design time
+  - language implementation time (or, compiler design time)
+  - compile time
+  - link time
+  - load time
+  - run time
+
+- Examples:
+  - '*' is bound to multiplication at language design time
+  - 'INTEGER' type in FORTRAN is bound to a range of possible
+    values at language implementation time
+  - A Java variable is bound to a type at compile time
+  - A call to a function is bound to the function code at link time
+  - A variable can be bound to storage at load time 
+  - A value is bound to a variable at run time
+
+  - Example from the book: 
+
+    int count;
+	count = count + 5;  
+
+    - set of possible types for count: bound at language design time
+    - type of count: bound at compile time
+    - set of possible values of count: bound at language implementation time
+    - value of count: bound at execution time
+    - set of possible meaning for the operator +: bound at language
+      design time
+    - Meaning of the operator symbol '+': bound at compile time
+    - Internal representation of literal 5: bound at language implementation time
+
+- Static binding: occurs before run time and remains unchanged throughout
+                  program execution
+
+- Dynamic binding: occurs during run time or can change throughout
+                   program execution.
+
+==========================================================================
+* Storage binding and lifetime
+==========================================================================
+
+* Introduction
+  - How does one associate memory locations to variables?
+  - Fundamental for a PL, and it's important to really understand:
+     - to detect bugs 
+     - to understand performance issues
+    
+  - Thre definitions:
+    1. "Allocation": the process of binging a variable to a memory cell
+       that is taken from a pool of available memory. 
+    2. "Deallocation": the process of unbinding a variable and placing its memory
+       cell back in the pool of available memory. 
+    3. "Lifetime of a variable": the time during which the variable
+       is bound to a specific memory location.
+  
+  - Four categories of variables:
+    1. static
+    2. stack-dynamic
+    3. explicit heap-dynamic variables
+    4. implicit heap-dynamic variables
+
+* The runtime memory
+
+  - The logical organization of the memory that is used by a running problem
+  - 3 main areas for variables:
+    - the global or static area 
+    - the stack (contains "activation records")
+    - the heap 
+
+    + the registers for temporary data
+    + read-only memory pages for constant data and code
+
+          +-----------------+
+          |   static area   |
+          +-----------------+
+          |      stack      |
+          +-----------------+
+          |        |        |
+          |        v        |
+          |                 |
+          |        ^        |
+          |        |        |
+          +-----------------+
+          |      heap       |
+          +-----------------+
+ 
+
+* Static variables
+
+  - bound to memory cell before program execution begins, and remain
+    bound to those same memory cells until termination.
+  - lifetime = entire program execution
+
+  - Global variables:
+     - advantage: convenient and efficient
+     - disadvantage: detrimental to modularity
+
+  - History sensitive variables 
+
+	int f(int x) {
+          static int a = 0;
+	  a += 2;
+	  printf("%d\n",a);
+	}
+
+	f(2) --> 2     f(4) ---> 4
+
+      - advantage: efficient (no indirection + no alloc/de-alloc)
+      - disadvantage: does not allow recursion (FORTRAN I, II, IV)
+
+* Stack-dynamic Variables: 
+
+  - bound to storage when their declaration statements are "elaborated",
+    i.e. when execution reaches the code to which the declaration is
+    attached, at run time.
+
+	int f(int x) {
+	  int a = 0;
+	  ...
+	  f(y+a);
+	  ...
+         }
+
+  - lifetime = while the subprogram is active
+  - stack-dynamic variables are allocated from the run-time stack.
+
+			|              |
+    Stack pointer ----> +--------------+
+			| <local vars> |
+			+- - - - - - - +  Activation Record for f()
+			|   <stuff>    |
+			+--------------+
+			|              |  Activation Record for g()
+			+--------------+
+			|              |  Activation Record for main()
+			+--------------+
+ 		          Runtime Stack
+
+  - advantage: enable recursion as each active copy of the program
+               can have its local storage.
+  - disadvantage: overhead (bookkeeping + indirection)
+  - we'll talk about the stack in more detail when we talk about scoping
+
+* Explicit Heap-dynamic Variables: 
+
+  - the heap is a unstructured pool of memory cells.
+  - variables are bound to memory cells that are allocated and
+    deallocated by explicit run time instructions specified by the
+    programmer.
+  - lifetime = from explicit allocation to explicit deallocation
+
+  - the variables can only be pointers or references.
+
+	C: 
+	  int *intptr;
+	  intptr = (int *) malloc(1 * sizeof(int));
+          free(intptr);
+
+  - advantage: high flexibility, convenient to implement data structures
+  - disadvantage: low reliability 
+    - Solutions in Java:
+      - remove pointers (only references)
+      - array bound checking
+      - garbage collection
+
+* Implicit heap-dynamic variables: 
+
+  - bound to heap storage only when assigned values,
+    with implicit deallocation. 
+  - lifetime = from implicit allocation to implicit deallocation
+
+  - In C:
+     char *x;
+
+     x = "foo";
+     x = "foobar";   // this is what the book says, we'll see that
+                     // it's actually trickier than this
+
+  - In Javascript:
+
+     x = 2;
+     x = "foo";
+     x = [1,2,3,4,5];
+
+    - in this last example storage is bound at each assignment as well
+      as the type (see our discussion of type binding)
+
+* Can be tricky:
+
+  - Example in C
+     // implicit                // explicit
+     int main() {		int main() {
+       char *a="foo";	    	  char *a;
+       a[0] = 'F';	  	  a = (char *)malloc(4*sizeof(char));
+     }			  	  strcpy(a,"foo");
+                          	  a[0] ='F';
+                        	}
+
+   - The code on the left causes a "Bus Error" but the code on the right works!
+
+   - Explanation:
+     - In the code on the left the compiler treats "foo" as a constant and 
+       allocates it in the static area a compile time, so that overwriting
+       any piece of it is illegal
+     - So it would seem that this is not really heap-dynamic
+
+   - Even weirder perhaps: the following code works perfectly:
+      int main() {
+        char a[4]="foo\0";
+        a[0]='F';
+      }
+     
+     - This indicates that the array 'a' is indeed heap-dynamic.
+
+   - The compiler I used must make a distinction between strings and character arrays
+     in terms of storage binding when the binding is implicit. 
+
+

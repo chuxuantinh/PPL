@@ -1,0 +1,865 @@
+=====================================================================
+* Type binding: 
+=====================================================================
+
+* Introduction 
+  - before a variable can be referenced in a program it must be bound
+    to a type:
+  - 2 issues: 
+     - how to specify the type?
+     - when does the binding take place?
+
+* Static type binding: 
+
+  - done through explicit or implicit declaration. 
+
+   1. Explicit declarations:
+	a statement in a program that lists variable names and specifies
+	their types
+   2. Implicit declarations:
+	means of associating variables with types through default
+	conventions.
+
+  - Most programming languages designed since the mid-1960s require
+    explicit declarations (not in Perl or ML)
+  - FORTRAN, PL/1, BASIC have implicit declarations.
+    - example: FORTRAN: I, J, K, L, M, N:  INTEGER 
+                                           otherwise REAL
+       - disadvantage: detrimental to reliability
+       - advantage: minor convenience
+       - it has been abandonned
+  - Perl:
+     - $xxx is a scalar, @xxx is an array, %xxx is a hash.  
+     - different name spaces and thus less unreliable. 
+                        
+* Dynamic type binding:  
+
+  - no declaration. A variable is bound to a type when it is assigned
+    a value in an assignment statement (at run time, take the type
+    of the value on the right-hand side)
+  - dramatic difference between static and dynamic type binding
+  - main advantage of dynamic type binding: flexibility.
+    - example: a program to process a list of data
+	       in a language that uses dynamic type
+	       binding can be written as a generic program. 
+        - APL, SNOBOL4, JavaScript, COMMON LISP
+	  - JavaScript:  
+    	    element = "foo"
+	    element = [10.2, 3.5]
+ 	    element = 4
+	- Without type binding:
+          - C: void * (no type checking)
+	  - Java: Object  (cleaner but no type checking)
+          - C++ (and now Java):  generics  (adds complexity))
+
+  - drawbacks of dynamic type binding:
+    - Error detection capability of the compiler is diminished
+      - example: any two types can appear on opposite sides of the
+        assignment operator.
+         - i and x are integer variables and y is a real
+         - i = x mistyped as i = y
+         - i's type becomes real 
+         - no error message
+         - execution it probably wtong 
+    - Cost: considerable overhead at runtime 
+      - dynamically typed languages are often implement in interpretation,
+        because the overhead of type checking is not the bottleneck.
+      - by contrast, statically typed language are seldom implemented in
+        interpretation.
+
+=====================================================================
+* Type checking
+=====================================================================
+
+- Type checking is activity of ensuring that the operands of an operator
+  are of compatible types.
+- A compatible type is one that is either legal for the operator or is
+  implicitly converted (coercion).
+- A "type error" is the application of an operator to an operand of
+  an invalid type
+- Only a few languages do not do type checking and will happily apply
+  any operator to any value (Bliss, BCPL - only a "word" type)
+- If static type binding --->  static type checking possible 
+                               (at compile time)
+- If dynamic type binding ---> dynamic type checking required
+  - Each value must be "tagged" with a type.
+  - maintaining this run-time information is expensive
+    and uses memory (can be done easily in an interpreter)
+    - This is what Common Lisp does
+
+- Type checking is complicated when a PL allows a memory cell
+  to store values of different types at different times during execution.
+- In fact, there are cases in which although static type binding is used,
+  not all type checking can be static.
+- Example:  C unions.  
+  - Type checking, if done, must be dynamic, i.e.  the compiler must
+    generate code that keeps track of and checks type.
+
+	#include <stdio.h>
+		
+	int main() {
+  	  union {
+            int i;
+    	    char *s;
+  	  } x;
+		
+  	  x.i = 1;
+  	  printf(x.s);
+	}
+
+
+  - The above is an incorrect program
+  - C compilers do not do dynamic type checking to be efficient
+  - We will discuss what other languages have done to fix this
+    when we talk about the union type
+
+- This is true also of object-oriented languages. Although Java
+  is statically typed (every variable is explicitly declared), the type of
+  an object must be determined at runtime to allow dynamic method binding.
+
+- Common Lisp is dynamically type-checked but allows type annotations:
+  - Hints to the system so that parts of a program can be statically type
+    checked and thus lead to more efficient execution.
+  - Example: Function that returns the sum of the elements of a list
+
+       (defun list-add (l)
+         (let ((sum 0))
+           (dolist (i l sum)
+             (setq sum (+ i sum)))))
+
+    - To increase efficiency, one can "declare" the argument types
+
+	(defun list-add (l)
+    	  (let ((sum 0))
+    	    (declare (fixnum sum))
+    	    (dolist (i l sum)
+      	      (declare (fixnum i))
+      	      (setq sum (+ i sum)))))
+     
+      -  This of "fixnum" as "integer"
+      - With this, the compiler can depend on the type values to use a
+        specific integer-optimized addition operator at run-time directly 
+          - rather than having to look at the types and then use the 
+            integer-optimized addition operator if applicable
+      - Furthermore, this will generate type errors if one passes, say,
+        floats.
+
+    - There is MUCH MORE that Common Lisp can do with types in fact:
+      - type definitions
+      - coercions
+      - etc.
+
+- Some languages give the programmer access to explicit type information
+  - Java:  instanceof
+  - Common Lisp:  typep predicate
+       (defvar x 2)
+       (typep x 'integer)  --> T
+       (typep 'x 'symbol)  --> T
+       (typep 'x 'integer) --> NIL
+ 
+=====================================================================
+* Strong typing: 
+=====================================================================
+
+- strongly typed language: type errors can always be detected (at compile
+                           or at runtime)
+
+- became prominent in the "PL revolution" of the 1970: Strong typing is key
+  to reliability
+
+- FORTRAN: not strongly typed 
+   - actual and formal parameters not type checked)
+   - EQUIVALENCE
+
+- C/C++: not strongly typed  
+   - formal/actual parameters before ANSI C
+   - union type
+
+- Pascal: almost strongly typed 
+   - but variant records (see data type lecture)
+
+ - Ada: almost strongly typed.
+   - fixed variant records fix the Pascal problem
+   - but explicit disabling of type checking  (UNCHECKED_CONVERSION) alows!
+   - Reliability was a main concern for Ada
+   - And yet, the language was designed with a loophole!
+   - In fact, in Modula-3 there was a "LOOPHOLE" keyword!!
+
+- Java: strongly typed, sort of
+   - for explicit casts can cause type errors 
+   - Java comes with dynamic method binding which can provide flexibility that
+      language who have unions do not have:
+
+	example:
+		union foo {          abstract class Foo;
+		  int x;             class FooInt extends Foo; 
+		  char y;            class FooFloat extends Foo;
+		};
+		
+
+- ML is strongly typed
+
+=====================================================================
+* Type inference
+=====================================================================
+
+- ML uses an interesting type inference mechanism
+
+- Goal: require the programmer to specify types only when
+        necessary
+
+- Example:
+   fun foo(x) = 2.0 * x;  ---> type of x is inferred to be float 
+   fun foo(x) = 2 * x;	  ---> type of x is inferred to be int 
+   fun foo(x,y) = x * y;  ---> ERROR 
+
+- The programmer can provide hints
+   fun foo(x : int,y) = x * y;   ---> OK 
+   fun foo(x,y) : int = x * y;   ---> OK 
+   fun foo(x,y) = (x : int) * y; ---> OK 
+   fun foo(x,y) = x * (y : int); ---> OK
+
+=====================================================================
+* Data Types
+=====================================================================
+
+* History of data types
+  - Computer programs produce results by manipulating data
+  - The ease with which they can perform this task depends on
+    how well the data types match re real-world
+  - Very early on it was acknowledged that a language should
+    support multiple "basic" types
+  - In the early languages (FORTRAN pre-90), all data structures
+    had to be "simulated" with arrays.
+  - COBOL: was the first step away to allow structure
+  - PL/1 included many data types
+  - ALGOL: included a few basic types with a flexible
+           structure-defining capabilities.  (more orthogonal, hence better)
+  - User-defined types were one of the most important advances and paved
+    the way for abstract data types, classes, and object-orientation
+    (still trying to get types match the real-world)
+  - Evolution chain:
+         Primitive Data types
+         Structured Data types
+        User Defined Data types
+         Abstract Data types
+               Object
+
+  - What we're going to do:
+    - look at a few interesting types
+    - discuss important design issues
+    - say why language designers did what they did
+
+* What is a data type?
+  - A type is a set: when you declare a variable of a certain
+    type you are saying that the values the variable can have are 
+    elements of a certain set. All elements of the set share the
+    same common representation.
+  - typically, along with the set, a number of standard operations
+    are defined on elements withing the set (e.g. addition)
+
+=================================================
+* Primitive Datatypes
+=================================================
+
+* Introduction
+  - Any type that a program can use but cannot define is 
+    called a primitive type
+  - Typically a reflections of what the hardware directly supports
+  - Languages that need to be portable specify primitive 
+    type implementations
+  - Languages that aim for performance may leave this unspecified:
+    - Example: 
+      - very easy to write a C code that will work
+        on a Pentium and not on an Alpha
+      - a compiler can choose a large int to match the alpha's
+	large word size, while a another compiler can choose a
+ 	small int size to match a Pentium's small words.
+      - writing portable programs in C can be a challenge.
+      - Java specifies exactly how an int is stored.
+    
+* Numerical types:
+
+  - Integer (see book)
+    - most language support several sizes represented by a string of bits
+      - sign-magnitude notation (two representations of 0)
+      - two's complement (used)
+ 
+  - Floating point (see book)
+    - fraction + exponent, standardized by IEEE FP standard 754
+    - most languages include float and double
+  
+  - Decimal
+    - numbers with a fixed number of decimal digits
+    - essential to COBOL
+    - stored like strings: binary coded decimal (BCD)
+      - example:  12.39:  0001 0010 0011 1001
+      - take much more space than binary 
+    - but early processors had optimized capabilities for dealing with them
+	  
+* Boolean
+  - introduced in ALGOL 60 and have been included in MOST
+    PL since then BUT for C 
+    - C++ of course allows both in order to be as messy as possible
+  - A boolean value could be represented by a single bit,
+    but typically languages uses a whole word for alignment issues
+    (furthermore, loading 8 bits is as easy as loading 1 bit, which you
+    can't really do).
+
+* Character
+  - stored with numeric coding
+  - ASCII: 1 byte 0 - 127
+  - Unicode: 2 bytes, include all weird characters from foreign
+            languages and is in Java
+
+
+=====================================================================
+* Structured data types:
+=====================================================================
+
+- Types defined in terms of other types
+
+* STRING TYPE
+ - A string is a sequence of characters
+ - 2 main design issues:
+
+   1. Should strings be simply a character array or a full-fledge type?
+
+      - Pascal, C, C++, Ada: strings are just a character array
+        and are defined as such in programs
+        - these languages provide string operations: substrings,
+           concatenation, assignments, etc..
+        - Pascal and Ada: operators  MYSTRING(2:4),  STRING1 & STRING2
+        - C and C++ use a string library (string.h): strcmp, strcat, etc..
+
+      - Java, FORTRAN, BASIC treat strings as a primitive type 
+        (SNOBOL4, Perl:  built-in pattern matching)
+        - Dealing with strings as arrays can be cumbersome
+	- Adding a string primitive type is not costly and is
+	  really the way of choice in recent languages
+          - besides, complex string libraries really amount to emulating
+            a full-fledge data type.
+
+    2. Should strings have static or dynamic length?
+
+      - static length strings:
+	   - the length is specified in the string declaration
+	      (FORTRAN, COBOL, Pascal, Ada)
+
+	      	CHARACTER (LEN = 15) NAME1, NAME2      (FORTRAN 90)
+
+	   - static length strings are always full: if a shorter string
+	     is assigned to a string variable, the empty characters are
+	     set to blanks. 
+	   - efficient but not very flexible and wasteful.
+
+      - variable length strings
+	   - limited dynamic length strings (C and C++):
+	      - can store any number of characters between zero and
+	        the maximum.
+              - fast but not very flexible and wasteful
+
+	    - dynamic length strings (SNOBOL4, JavaScript, Perl):
+	       - overhead of dynamic storage allocation
+		  (note that C can also mimic this:
+		  	char *s;
+			char s[10];
+		  )
+              - slower but very flexible and less wasteful
+      
+  - Implementation of string types
+    - Use of a runtime descriptor that stores
+      - the address of the string
+      - its maximum length if needed
+      - its current length if needed
+		(really implements a string object under the hood)
+  
+      - however maintaining the descriptors can be cumbersome
+        - C and C++: null-terminated strings. 
+	  - The string's current length is implicit and needs not be kept. 
+	  - The string's maximum length is not checked and thus not kept
+	    (unlike in Java)
+
+    - Dynamic strings: how does one manage storage
+
+	- Two approaches: 
+	  - storing strings in a linked list
+	     - large amount of storage and overhead
+	  - store complete strings in adjacent storage cells and use
+	    reallocation 
+	      - fast string operation
+	      - requires less storage
+	      - allocation process is slower
+	      (you can implement that in C with realloc())
+
+  - Summary:
+    Two approaches:   primitive type with operators
+                      char array with libraries
+
+* Array
+  - see book for details about array syntax in different languages
+
+  - Implementation of arrays
+    - requires some compile time effort: the code to allow accessing
+      array elements must be generated at compile time.
+    - Main Question: mapping a[i,j] to an address in memory
+    - Problem:
+      - computer memory is 1-D
+      - arrays can be multi-dimentional
+ 
+    - Example using 2-D:
+      - Array with 10 rows, 20 columns, elements of size 1 byte
+        we are going to assume that the indices start at 1
+        (i.e., a[1,1] is the first element of the array)
+
+
+      - How can we put in in 1-D memory?
+     - One way to do it is to chop it up in columns
+       - How do we find the address of a[3,6]?
+          @(a[1,1]) + 10*(6-1) + 3-1
+       - Generalization to a[i,j]:
+          @(a[1,1]) + 10*(j-1) + i-1
+
+       - Generalization to int a[m,n]:
+          @(a[1,1]) + m*(j-1)*sizeof(int) + (i-1)*sizeof(int)
+ 
+       - This is code that the compiler must generate
+       - It is called  COLUMN-MAJOR.
+     - ROW-MAJOR: chopping up in rows
+     
+
+   - Different languages use different things:
+      - C is row major
+      - FORTRAN is column major
+
+   - Why should a programmer care to know how arrays are stored
+     internally? (after all, a[i][j][k] is all you care to know)
+     - Performance implication of row- vs. column-major
+       - locality: making sequences of access to contiguous 
+                   memory locations
+       - important because of cache
+
+      - Example:, so let's say you're a FORTRAN programmer and you write
+
+	      DO 10 I=1,M
+	        DO 20 J = 1,N
+	          A(I,J) = 1.0
+	 20     CONTINUE
+	 10   CONTINUE
+
+		A(1,1) A(1,2) A(1,3) ...
+
+
+              DO 10 J=1,N
+	        DO 20 I = 1,N
+		  A(I,J) = 1.0
+         20	CONTINUE
+         10   CONTINUE
+
+	- You can try this at home
+          - on my laptop: 12 seconds  --> 7 seconds
+
+
+  - Implementation of arrays:
+    - Array descriptor used at compile time or run time depending on
+      the language (e.g., Java checks at runtime)
+
+         - Address
+	 - Element type
+	 - (Index type)
+	 - Number of dimensions
+	 - Index range 1
+	 - ...
+	 - Index range n
+	 - Address
+      	    
+     -  Based on this descriptor, one can generates the mapping code
+
+* Associative arrays
+  - unordered collection of data items that are index by an equal
+    number of values called keys.      
+  - Some languages provide them as a type (in others you must implement
+    them yourself with data structures)
+  - Perl: calls them "hash"
+
+        %ages = ("John" => 26, "Jenny" => 17, "Alan" => 84);
+        $ages{"Carl"} = 35;
+        delete $ages{"John"};
+        if (exist $ages{"Helly"})
+    - Implemented with hash tables
+
+==========================================================
+* User defined type
+==========================================================
+
+* Records 
+  - possibly heterogeneous aggregate of data elements in which the
+    individual elements are identified by names
+  - have been part of most popular programming languages, except
+    FORTRAN (appeared in F90).  COBOL needed them.
+  - The class structure in OO PL supports records.
+  - Different languages use different syntax for records (see book)
+
+  - Way to Reference elements of a record:
+    - COBOL: 
+      - example of a record on page 249
+	MIDDLE OF EMPLOYEE-NAME OF EMPLOYEE-RECORD
+    - Most other languages use the '.' notation
+ 
+  - One issue: Eliptical references?
+
+           struct { 
+	     int age;
+	     struct {
+	       char *first;
+	       int *last;
+	     } name;
+	   } person;
+
+    - fully qualified reference: lists all intermediate names
+      as in person.name.first
+    - elliptical: may ommit some of them if unambiguous (COBOL,PL/1)
+      as in person.first
+    - although elliptical is convenient:
+	- the compiler must do more work
+	- detrimental to readability
+	- abandonned
+  
+  - Implementation:  Stored contiguously in memory (see Section 6.7)
+    - In a compiled language:
+      - a descriptor is maintained at compile-time  
+	  Address
+  	  Name
+	  Type
+	  Offset
+          Name 
+          Type
+          Offset
+          ...
+          
+      - descriptor is used to generate addresses
+      - no need for a runtime descriptor
+    - In an interpreted language
+       - the descriptor may be maintained at runtime by the interpreter.
+
+* Union 
+  - a type that may store different type values at different times during a
+    program execution.
+  - It's called a union becayse types are set (unions of multiple sets)
+  - Why would you need something like tha?
+    - convenient to pass arrays of heterogeneous things
+      - Symbol table
+    - convenient to store a ptr or a value
+
+  - One issue: type checking
+    - free unions:
+       - no language support for type checking. 
+       - FORTRAN (EQUIVALENCE)
+       - C, C++ struct
+
+                #include <stdio.h>
+
+                int main() {
+                  union {
+                    int i;
+                    char *s;
+                  } x;
+
+                  x.i = 1;
+                  printf(x.s);
+                }
+
+    - discriminated unions or variant records (introduced in ALGOL 68)
+       - idea: support unions as part of a record that also contains
+               an enumeration. 
+       - Pascal:
+
+           type shape = (circle, rectangle);
+	        figure =
+	          record
+		    case form: shape of
+		      circle: (diameter: real);
+		      trianle: (side : real;
+		                side : real)
+                    end;
+ 
+          - the value of form tells what to expect.
+	  - one can emulate that in C
+
+                  enum tag_t {INTEGER=1, STRING};
+
+                  struct {
+                    tag_t tag;
+                    union {
+                      int i;
+                      char *s;
+                    } value;
+                  } x;
+
+
+                  if (x.tag == STRING)
+                    printf(x.value.s);
+                  else
+                    printf("ERROR!\n");
+
+       - Still a problem for type checking: 
+         - the user can change the tag without changing the other content
+       - Can be used as a loophole into the type checking system
+
+    - constrained variant record (introduced in Ada)
+      - the tag cannot be changed independently
+          
+- Evaluation:
+   - potentially unsafe: 
+     - the reason why many language are not strongly typed 
+        (C, Pascal, C++)
+   - provide flexibility
+   - Java doesn't have them: concern for safety
+
+- Implementaion: use the same address for every possible variant and
+  a compile time descriptor (see Section 6.8)
+
+=====================================================================
+* Pointer types
+=====================================================================
+
+- Pointer type values consists of memory addresses and the special value
+  'nil' (or NULL, or 0, etc.)
+
+- Pointers have been designed for two uses:
+  - indirect addressing (heavily used in assembly)A 
+  - dynamic storage management (pointers can point to the heap)
+
+- Pointers improve writability
+  - example: doing dynamic data structures (linked lists, trees) 
+    in a language with no pointers (FORTRAN 77) must be emulated
+    with arrays, which is very cumbersome and cannot "grow" but rather
+    the programmer must guess the maximum size. 
+
+- PLs that have a pointer type provide two kinds of operations:
+  - assignment
+  - dereferencing
+
+- Dereferencing is done explicitly in most languages, with an operator`
+     int x = 3;
+     int *y;
+     int z;
+     y = &x;
+     z = *y;
+
+- PL/I was the first high-level PL to provide a pointer type.
+
+- Pointers come with several problems (PL/I, C, C++, etc.)
+
+  - Dangling pointers: a pointer variable that contains the address of 
+    a memory cell in the heap that has been deallocated:
+      char *x, *y;
+      x = (char *)strdup("Hello");
+      y = x;
+      free(y); // x is not a "dangling pointer"
+      ...
+      printf("%c\n",x[0]);  // Will probably not hold a char value
+      x[0] = 'h'; // May destroy valuable data
+                  // May try to overwrite a memory cell used by the system
+  
+  - Memory leaks:
+
+      void fun(char *string) {
+        char *x;
+        x=(char*)strdup(string);
+        x[0] = 'A';
+        printf("%s\n",x);
+        return;
+      }
+                            
+- Pointers in Ada: 
+  - can only point to the heap
+  - no pointer arithmetic
+  - optional implicit deallocation
+- Pointer in C/C++: 
+  - can point pretty much to anywhere
+  - pointer arithmetic is allows:
+     int a[10];
+     int *ptr = a;
+     int offset = 3;
+     int *newptr;
+
+     newptr = ptr + offset; // Scales offset to offset*sizeof(int)
+                            // adds offset to ptr
+     *newptr = 13; // equivalent to a[3] = 13;
+  - generic pointer: void*
+    - allows to view a sequence a bytes just as a sequence of bytes,
+      which can be interpreted as a certain type later:
+
+      #define INT 1
+      #define CHAR 2
+
+      void print_item(void *item, int type) {
+        switch(type) {
+          case INT: printf("%d\n",*(int*)item); break;
+          case CHAR: printf("%c\n",*(char*)item); break;
+        }
+      } 
+
+      ...
+      char a = 'b';
+      int x = 2;
+      print_item(&a,CHAR);
+      print_item(&x,INT);
+
+- Some people believe that pointers are just a plain bad idea:
+  Hoare, 1973: "Their introduction into high-level languages has been
+                a step backward from which we may never recover"
+
+
+- Implementation of pointers
+  - stored in 2-, 4-, 8- bytes memory cells (depending on the size of the
+    address space)
+
+  - Solutions to the dangling pointer problem
+    - Toombstones:
+      - each heap-dynamic variable includes a special cell, a tombstone,
+        that points to the actual memory cells in the heap. 
+      - the variable points to the tombstone, not to the actual cells
+      - upon deallocation, the tombstone is set to nil
+      - future access from another pointer variable will notice that the
+        tombstone is set to nil, and thus "realize" that the variable is
+        no longer allocated
+      - this is just a hack that a programmer could almost do on his own.
+      - costly in time and space
+      - no current language uses tombstones
+    - Locks-and-keys:
+      - another way to implement the same concept as the tombstones (see book)
+    - The best solution to avoid the dangling pointer problem and the  memory
+      leak problem is to not allow the programmer any explicit deallocation:
+       - LISP, Java: really a "reference" type, not a pointer type (see book)
+       - C# provides both references and pointers, but "discourages" the use of
+         pointers. ('unsafe' keyword)
+  - Implicit heap-management: when to deallocate on behalf of the user?
+    - Reference counters:
+      - happens continuously (eager approach)
+      - every cell keeps track of how many pointer variables points to it
+      - if that counter reaches zero, then one can deallocate the cell
+      - problems
+	- not space efficient (one counter per cell, and there may be many
+	  small cells)
+	- not time efficient (updates of counters, which can be extremely
+	  frequent, especially in a language like KISP
+        - problems with circular references (but there are solutions)
+    - Garbage collection:
+      - happens only when space becomes scarce (lazy approach)
+      - every cell has a bit that means "garbage" if set to 1
+      - garbage collection works as follows:
+        - mark all cells to "garbage"
+        - trace every pointer in the program to de-garbage referenced cells
+        - deallocate remaining garbage
+        - see book for an example of how a garbage collection algorithm
+          could work
+    - Things get more complicated for variable-size cells (see book)
+     
+
+
+=====================================================================
+* Type compatibility
+=====================================================================
+
+- Issue that arises with user-defined types
+- Two variables have "compatible types" if either one can
+  be assigned to the other
+- Two kinds of type compatibility:
+  1. Name type compatibility: variables are compatible iff they are
+     declared in the same declaration or in declarations that use the same
+     type name
+  2. Structure type compatibility: variables are compatible iff the types
+     have similar structures
+
+- Most language use combination of the two kinds
+- We're going to take examples from Pascal and Ada, which we have not
+  covered. But, these two languages have very rich type constructs, which
+  are not in other languages. With the advent of OO Programming Languages,
+  rich type definition capabilities are superseeded by classes and
+  inheritance.
+
+- Name type compatibility is really easy to implement but VERY restrictive
+
+    Pascal examples:
+
+	type indextype = 1..100;   // subrange type 
+	  count : integer;
+          index : indextype;
+
+        count = index  or  index = count    BOTH INVALID
+
+    (Note that the limited range subtype for integers is for reliability:
+     at compile time you want to enforce that bad things cannot happen if
+     you know that some integer should always be in the range)
+
+- Structure type compatibility is more flexible but difficult to implement
+  - for instnace, what about self-referential data structure?
+  - other questions can arise:
+
+	struct { int x; int y}       struct {int x; int z}    compatible?
+        arrays 0..10                 arrays 1..10             compatible?
+        enumeration (A,B)            enumeration (A,C)        compatible?
+
+  - Even worse: structure type compatibility can disallow needed differentiation:
+
+	   type celsius = real;
+                farenheit = real;
+
+    - under structure type compatibility, a celsius value can be
+      assigned to a farenheit variable, which is probably not good. 
+
+- Clearly, both schemes have disadvantages. 
+              
+- Pascal: the original definition of Pascal did not clearly specified
+          type compatibility. ISO standard published in 1982
+
+  - Example:
+	type
+	  type1 = array [1..10] of integer;
+          type2 = array [1..10] of integer;
+          type3 = type2;
+
+    - type1 and type2 are not compatible (not structure compatibility)
+    - type3 and type2 are compatible (not name compatibility)
+    - this mix is called: "declaration equivalence"
+      -	if you want type1 and type2 to be compatible, why would 
+        you want 2 type definitions?
+ 
+- Ada: name type compatibility is used, but provides the notion of
+        subtypes and derived types, to be less restrictive
+
+  - derived type: new type based on some previously defined type
+                  with which it is incompatible but has the same
+                  structure. The derived type inherits the properties.
+
+	type celsius is new FLOAT;
+        type farenheit is new FLOAT;
+
+	values are not compatible and not compatible with FLOATS
+	  (exception: literals:     celsius = 2.0)
+
+  - subtype: range-constrained version of an existing type and is
+             compatible with its parent type
+       subtype SMALL_TYPE is INTEGER range 0..99;
+
+       SMALL_TYPE variables are compatible with INTEGER values.
+	
+  - Ada needs all this because there is NO coercion (unlike C)
+
+- C: uses structure type compatibility for all types BUT for structures and
+     unions for which C uses declaration equivalence.
+
+- C++: name equivalence
+
+- In language that do not allow users to define types (FORTRAN, COBOL),
+  name equivalence cannot be used
+
+========================================================
+* Other types
+========================================================
+
+- Set types  (ch. 6)
+- Abstract types (ch. 11) 
+
