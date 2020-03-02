@@ -1,0 +1,789 @@
+==========================================
+* Syntax and Semantics
+==========================================
+
+
+==========================================
+* Overview
+==========================================
+
+* Syntax and Semantics: 
+
+  - Syntax of a programming language is the part of the language
+    definition that decribes how programs *look*: their form and structure
+  - Semantics of a programming language, 
+    which describes what language constructs *do*
+
+* Steps in a compiler:
+	    	
+
+			Source program
+			     |
+		     ------------------
+		     |lexical analysis|
+		     ------------------
+			     |
+			 token string       
+			     |
+		    --------------------
+		    |syntactic analysis|
+		    --------------------
+		             |
+			 parse tree
+			     |
+		    -------------------
+		    |semantic analysis|
+		    -------------------
+		             |
+		       abstract program
+			     |
+		     -----------------
+		     |code generation|
+		     -----------------
+		             |
+		       object program
+
+
+* Both lexical analysis and syntactic analysis deal with syntax,
+  why separate them in two steps in the compiler?
+  - Efficiency:
+    - design of the lexer is based on a finite state automaton, while
+      the parser is a pushdown automaton, which is more complex
+    - for a non-optimizing compiler, about 75% of compile time is
+      spent in the lexer
+  - History:
+    - prior to ASCII, computers had their own character sets
+      - still different character sets today actually
+    - it used to be hat the end-of-line character was very O/S dependent
+
+* Need for formal description of syntax: 
+
+  - The task of providing a concise yet understandable description
+    of a programming language is difficult but essential to a
+    language's success:
+      - people must be able to implement a parser that will 
+        accept all valid programs and reject all invalid programs
+	- Early language didn't have any formal description.
+	   (e.g. FORTRAN) Very cumbersome documents
+          - parsers were often not fully correct
+
+* Formal methods of describing syntax:
+
+  - First attempts at formal methods to describing syntax created
+    more confusion than help
+      - you had to learn two languages, the language itself, and the
+        language used to describe the language.
+
+  - early-1960: John Backus and Noam Chomsky,  invented the same form:
+		Backus-Naur Form (BNF). 
+    - Chomsky was a linguist and his goal was to describe the 
+      grammar of natural languages
+
+  - John Backus: described ALGOL 58  with a revolutionary notation,
+     which was then modified by Naur: BNF
+    - this suffered from the "having to learn the language that
+      describes the language" and did not help ALGOL'58's case
+      although today every language is described in BNF. 
+
+  - Before BNF, it was virtually impossible to ensure that a compiler would
+    accept all syntactically correct programs in a language
+
+* BNF is really a metalanguage:
+  - non-terminals and terminals
+  - production:  non-terminal -->  <string of terminals and non-terminals>
+
+    <program> --> <stmtlist>
+    <stmtlist> --> <stmt>; | <stmt>;  <stmtlist> 
+    <stmt> --> <id> = <num>
+    <id> --> a | b | c
+    <num> --> 1 | 2 | 3
+
+* Some language syntaxes can be described very succintely in BNF 
+
+  - LISP:   7 rules   
+  - PROLOG: 19 rules
+  - Java:   48 rules
+  - C:      60 rules
+  - SQL:    233 rules
+  - Ada:    280 rules
+
+  (to be taken with a grain of salt)
+
+LISP BNF:
+  s_expression = atomic_symbol | "(" s_expression "." s_expression ")" | list 
+  list = "(" s_expression [ s_expression ] ")"
+  atomic_symbol = letter atom_part
+  atom_part = empty | letter atom_part | number atom_part
+  letter = "a" | "b" | " ..." | "z"
+  number = "1" | "2" | " ..." | "9"
+  empty = " "
+
+
+
+========================================================================
+* Conection between Syntax and Semantics
+========================================================================
+
+* Operator Precedence
+  - In most languages the * has higher precedence than the +, meaning
+    that we want to choose one parse tree rather than the next one.
+  - good syntax description can help semantics 
+  - It is possible to change the grammar to enforce operator precedence
+    - sum of terms, which can be <factors>
+  - using separate abstractions for the operands that have different precedences
+  - Example:
+
+	<expr> --> <expr> + <term> | <term>
+	<term> --> <term> * <factor> | <factor>
+	<factor> --> (<expr>) | <id>
+
+
+  - Precedence can be defined as the length of the shortest derivation
+    from the start symbol to the operator
+
+* Operator Associativity:
+
+  1-2-3 = (1-2)-3   [left-associativity]
+          or 
+          1-(2-3)   [right-associativity]
+
+  - Can be enforced with left- or right-recursion
+    - <expr> --> <expr> + <term>  implies left-associativity
+
+   
+
+* What languages do
+  - Many language do the same (natural) thing
+  - SmallTalk: no operator precedence
+  - APL: right-associativity with no operator precedence
+  - Programmers typically add parentheses when things are difficult to read
+
+    if (a < x < b)     equiv.  if ((a < x) < b)   [returns 1 if b >= 1]
+
+  - For languages like C, C++ and Java, the number of precedence levels and
+    operators makes the grammar huge
+    - this makes the parse very slow
+    - a possibility is to not "encode" any precedence/associativity in the
+      grammar, but just have a table that says what these things are (Java, C)
+        - 25 pages in the Java spec!
+        - would blow up the grammar with tens of extra productions
+  - There is a clear trade-off between the size of the grammar and the information
+    it tries to convey
+
+* Ambiguity
+  - Two parse trees for the same string
+    - well-known dangling-else problem
+  - Grammars can be "fixed" (grammar disambiguation)
+  - But one can choose to just say in the language spec what the rule should  
+    be to remove ambiguities, rather than making the grammar more complex
+    - example: a dangling else is matched with the closest unmatched if
+
+  - Surprisingly Java solves the dangling-else problem with a grammar extension
+     <IfThenStatement> --> if (<Expression>) <Statement>
+     <IfThenElseStatement> --> if (<Expression>) <StatementNoShortIf> else <Statement>
+ 
+   where the <StatementNoShortIf> is any statement but a <IfThenStatement> (it can
+   be a <IfThenElseStatement>).
+
+  - Another option is to modify the language
+    - Algol-68: begin ...  end
+    - Shell, Modula, Ada, etc.    
+
+* Comments
+  - many languages (Pascal, C) leave the syntax of comments outside of the language
+  - easy to specify as a simple spec rule
+  - would make the grammar more complex
+    
+=========================================================================
+* Syntax in Lisp?
+=========================================================================
+
+ - No expressions in LISP, but function applications!
+ - Everything is parenthesized.
+ - No associativity, No operator precedence. 
+   - Compare with the 25 pages of the Java manual
+ - This's also why writing a LISP interpreter is not very difficult
+   - write a pure Java interpreter would be extremely difficult
+   - writing a byte code interpreter is not that hard
+
+=========================================================================
+* Semantics
+=========================================================================
+
+* Two kinds:
+  - Static Semantics
+  - Dynamic Semantics  
+  
+  - Generally, when you hear people talk about "Semantics", they mean
+    "Dynamic Semantics".
+
+=========================================================================
+* Static Semantics
+=========================================================================
+
+* The static semantics of a language is only indirectly related to the
+  meaning of programs during execution: 
+   - It has to do with the legal forms of programs
+   - This is really more about syntax
+   - Not everything can be specified with a BNF grammar
+   - Called "static" because the analysis can be done at compile time
+
+* Example of things that cannot be done (easily) with just a context-free
+  grammar:
+  - Java : a floating-point value cannot be assigned to an integer type
+    variable, although the opposite is legal.
+    - This could actually be done with additional nonterminals and rules,
+      but then the grammar (and thus the parser) would be HUGE.
+  - Java: All variables must be declared before they are referenced.
+    - Impossible to do just with a context-free grammar.
+
+* Attributed Grammar: 
+  - Device used to describe more of the structure of a programming
+    language than is possible with a context-free grammar.
+  - Extension of context-free grammars
+  - Can be used, in a very limited way, to describe both the syntax and
+    semantics of programs.
+
+  - Three things are added to a context-free grammar:
+    (i) attributes: associated with grammar symbols, can hold values
+    (ii) semantic functions: associated with grammar rules 
+    (iii) predicate functions: associated with grammar rules
+
+  - Associated with each grammar symbol, X,  is a set of attributes A(X).
+    - A(X) is the union of two disjoint sets:
+      - S(X): set of synthesized attributes
+              used the pass information up the parse tree
+      - I(X): set of inherited attributes
+              used the pass information down the parse tree
+
+  - Associated with each grammar rule is a set of "semantic functions"
+    and a possibly empty set of predicate functions. 
+     - Given a grammar rule:   X0 ---> X1 ... Xn
+     - the synthesized attributes of X0 are computed with semantic
+       functions of the form: f(A(X1), .... A(Xn))
+         (we go up the parse tree by computing a node's attribute
+          with attributes of that node's children)
+     - the inherited attributes of Xi, for i=1,..,n are computed
+       with semantic functions of the form: f(A(X0),...,A(Xi-1))
+       (we go down the parse tree by computing a node's attribute
+        with attributes of that node's parent and siblings)
+
+  - A predicate function is a boolean expression on the attribute set
+    {A(X0),...,A(Xn)}
+
+  - A parse tree of an attributed grammar is the parse tree based
+    on the underlying BNF grammar, with attribute values. If all
+    attributes have a value, then the tree is said "fully attributed"
+
+  - Special class of attributes: "Intrinsic attributes" 
+    - synthesized attributes of leaf nodes whose values
+      are determined outside the parse tree.  
+    - Example: the type of '2' is int
+
+* Simple Examples: 
+
+ - Ada procedure:
+
+      procedure foo
+         .... 
+      end foo;
+
+  - How to enforce that the same name is provided at the beginning and
+    the end of a procedure? (note: It's really about syntax)
+
+      <procedure> --> procedure <proc_name>[1] <proc_body> end <proc_name>[2];
+
+      Semantic Predicate:  <proc_name>[1].string = <proc_name>[2].string
+
+ - Types:
+
+    <assign_sum> --> <var>[1] = <num>[1] + <num>[2]
+
+  - only two types: int and real
+     int + int is an int 
+     int + real is a real
+     real + real is a real
+
+  - Semantic function:
+
+       <var>[1].type = (if (and (eql <num>[1].type int)
+                                (eql <num>[2].type int))
+			   int
+			   real)
+
+        [synthesized attribute)]
+
+  - See the Section 3.4 for a more complete example
+  - Attributed grammars are covered in depth in the compiler class
+
+=========================================================================
+* Dynamic Semantics
+=========================================================================
+
+* Ways to specify the meaning of the expressions, statements, and program units.
+
+* Why do we care about dynamic semantics?
+  - Programmers need to know precisely what the statements of a language do.
+  - Even more critical for Compiler/interpretor writers.
+    - it used to be that the same syntactically correct program
+      would run differently on different platforms 
+    - this was because the rescription of the semantics were vague and
+      thus lead different compiler writers to interpret them differently
+  - Program correctness proofs rely on some formal description of the
+    language semantics.
+  - Better understanding of language design 
+    - if the semantics of a construct is complex to describe formally, then
+      the construct may well be difficult for the programmer to use
+  - Would make comparison of languages easier
+
+  - PL/1 was the first language to provide a formal description of its semantic
+
+* There is no universally accepted notation for describing dynamic semantics.
+  We will look at three different ways:
+    (i)   Operational Semantics (which we will not emphasize much)
+    (ii)  Axiomatic Semantics 
+    (iii) Denotational Semantics 
+
+=========================================================================
+* Operational Semantics
+=========================================================================
+
+* Describe the meaning of a program by executing its statements on a
+  machine, either real or simulated, that understands a very low-level
+  language.
+   - the machine should have primitive instructions, so simple that no
+     misunderstanding can arise.
+   - the changes that occur in a machine's state when it executes a
+     given statement define the meaning of that statement.
+
+* How to do operational semantics:
+  - define a translator from the high-level language to the low-level language.
+  - define a "virtual machine" that runs the low-level language.
+
+* First Example:
+ 
+  - C Statement
+        for (expr1; expr2; expr3) { ... }
+
+  - A possible operational Semantics description
+
+      expr1;
+loop: if expr2 = 0 goto out
+            ...
+      expr3;
+      goto loop
+out:  noop 
+
+  - looks a lot like some form of assembly language
+
+* Evaluation of operational semantics
+  - Pluses:
+    - Gives a concrete, intuitive description of the programming language
+      being studied.
+    - Appeals to programmers because the descriptions given are so close
+      to real programs.
+    - Often used in programming manuals (the reader is the VM)
+  - Minuses:
+    - Striving to be executable, operational descriptions lose one of
+      the essential qualities of specifications: independence from the
+      implementation.
+    - Difficult to use as a basis for formal reasoning about programs
+
+=========================================================================
+* Axiomatic Semantics
+=========================================================================
+
+* Defined in conjunction with the development of a method to prove the
+  correctness of programs
+   - proof of correctness: proves that a program performs the computation
+     described by its specification for all valid input.
+  - Axiomatic Semantics defines proof rules which make it possible to
+    reason about the properties of programs.
+
+* Preconditions and Postconditions:
+  - Each statement of a program is both preceded and followed by
+    "predicates", which are expression that specifies
+    constraints on the program variables.
+
+     Notation: {P}   S   {Q}      
+        
+    S: program statement
+    P: constraints on variables BEFORE statement execution
+       called a "precondition"
+    Q: constraints on variables AFTER statement execution
+       called a "postcondition"
+
+  - Example: (in all our examples we assume that variables are integers)
+
+          sum = 2 * x + 1 {sum > 1}
+
+      This means that the postcondition for this statement is that, after
+      the execution of the statement, the value of sum is greater than 1
+
+* Weakest precondition: the least restrictive precondition that
+                        guarantees the postcondition
+
+    In the above example, {x > 10} is a valid precondition, but the
+    _weakest precondition_ is {x > 0}
+
+* Why do we care about the weakest preconditions? 
+   - If the weakest precondition can be computed from the given
+     postcondition for each statement of a language, then correctness
+     proofs can be constructed for programs in that language.
+   - The proof is begun by using as the postcondition of the last
+     statement of the program.
+   - The last postcondition should state the the desired results of 
+     the program's execution. 
+   - Then one works backward through the program.
+
+   - For some statement, the weakest precondition can be computed easily,
+     and specified by an "axiom" (i.e., a logical statement that is assumed
+     to be true)
+
+   - For some others, it's more complicated and we have to use "inference
+     rules" (i.e., methods of inferring the truth of one assertion on the basis
+     of the values of other assertions)
+
+* Assignment statements: preconditions and postconditions
+  - Let "x=E" be an assignment statement, and Q be its postcondition
+  - We want to compute its weakest precondition, P
+  - The "assignment axiom" states that P is defined by Q_{x->E}
+     - denotes Q in which all occurrences of x have been replaced by E
+  - Example: 
+
+           a = b / 2 - 1  {a < 10} 
+
+    the weakest precondition is:     P = { b / 2 - 1 < 10}
+    which reduces to {b < 22}. 
+
+  - Notation:  {Q_{x->E}}  S  {Q}
+
+  - Another example:
+
+	  x = x + y - 3 {x > 10}
+
+    the weakest precondition is:  P = {x + y - 3 > 10} = {y > 13 - x}
+
+    - Note that the appearance on the left side of the assignment statement
+      in its right side does not affect the process of computing the weakest
+      precondition
+
+* Rule of consequence
+  - How can the axiom for assignment statements be used to prove anything
+    about correctness?
+  - A given assignment statement with both a precondition and a
+    postcondition can be considered a theorem that needs to be proven,
+    for instance using the assignment axiom
+
+  - Example: 
+
+      Say we want to prove:  {x > 5} x = x - 3 {x > 0}   
+
+     - The assignment axiom gives {x > 3} as the weakest precondition
+     - Since {x > 5} => {x > 3}, the theorem is proven
+         - a stronger precondition implies the weakest one
+
+  - The above is really an inference rule that is called the "rule
+    of consequence"
+  - General notation for an inference rule:
+              
+	           S1, S2, ..., Sn
+		   ---------------      
+		         S
+
+     - which means:  S1 AND S2 AND ... AND Sn  implies  S
+
+  - notation for the rule of consequence:
+
+                   {P} S {Q}, P' => P, Q => Q'
+		   ---------------------------
+	                   {P'} S {Q'}              [note the typo in the book]
+
+    - which means:  
+      - a postcondition can always be weakened
+      - a precondition can always be strengthened
+  
+  - Back to the example, we can more formally write:
+
+                 {x>3} S {x>0} , {x>5} => {x>3}, {x>0} => {x>0}
+		 ----------------------------------------------
+		                 {x>5} S {x>0}
+
+      which proves the theorem
+
+* Inference rule for a sequence of statements:
+
+        {P1} S1 {P2}, {P2} S2 {P3}
+        --------------------------
+             {P1} S1;S2 {P3}
+
+  - If the statement sequence is:  x1 = E1; x2 = E2, then we have
+
+                {P3_{x2->E2}  x2 = E2 {P3}  and
+		{(P3_{x2->E2}_{x1->E1}} x1 = E1 {P3_{x2->E2}}
+ 
+  - Example: 
+
+           y = 3 * x + 1;
+           x = y + 3;
+           {x < 10} = P3
+
+           P2 = { y + 3 < 10} = {y < 7}
+	   P1 = { 3 * x + 1 < 7} = {x < 2}
+
+	   therefore:
+
+	    {x < 2}
+            y = 3 * x + 1;
+            x = y + 3;
+            {x < 10}
+
+* An inference rule for selection statements (if-then-else):
+
+      {B and P} S1 {Q}, {(not B) and P} S2 {Q}
+      ----------------------------------------
+            {P} if B then S1 else S2 {Q}
+
+  - Selection statements must be proven for both of their cases
+
+  - Example: Say we're looking for the weakest precondition
+	   
+           if (x > 0)
+           then
+                y = y - 1     (S1)
+           else
+                y = y + 1     (S2)
+           {y > 0}
+
+    - Assignment axiom =>   {y > 1}  y = y - 1 {y > 0}
+    - Assignment axiom =>   {y > -1} y = y + 1 {y > 0}
+    - We're looking for the weakest P such that:
+       P ==> {y > 1}   AND   P ==> {y > -1}
+    - Therefore: P = {y > 1}
+
+    {(x > 0) and (y > 1)} S1 {y > 0}, {(x <= 0) and (y > 1)} S2 {y > 0}
+    -------------------------------------------------------------------
+                {y > 1} if (x > 0) then S1 else S2 {y > 0}
+
+    - Note that in the above none of the variables in B are in the postcondition,
+      which makes things a bit easier
+
+* Logical pretest loop 
+  - More difficult that sequence because we do not know the number
+    of iterations
+
+     {P} while B do S end {Q}
+
+  - Look axiom:
+
+                        {P and B} S {P}
+          -----------------------------------------
+          {P} while B do S end while {P and not(B)}
+
+  - where P is called a loop invariant
+    - i.e., a predicate that satisfies the following:
+       {P} B {P}
+          [ the invariant is not affected by the loop-controlling expression ]
+       {P and B} S {P}
+          [ loop invariant true at each iteration]
+       {P and (not B)} => Q
+          [ loop invariant implies the loop post-condition at termination]
+
+  - Finding the loop invariant requires some ingenuity, like when doing
+    a proof by induction:
+       - try for a few cases
+       - hopefully see that a pattern emerges for the general case
+  - Method: compute the weakest precondition for S for consecutive
+            iterations
+
+  - Example: 
+  
+  	Let's prove: {y <= x} {while (y <> x) do y = y + 1 end  {y = x}
+
+0 iteration:     {y = x}     noop    {y = x}
+1 iteration:     {y = x-1} y = y + 1 {y = x}  (assignment)
+2 iterations:    {y = x-2} y = y + 1; {y = x-1} y = y + 1; {y = x} (sequence)
+3 iterations:    {y = x-3} ... {y = x}
+etc. 
+
+    therefore, P = {y <= x} "looks" like a loop invariant. 
+    Let's prove it
+
+    * {P} (x <> y) {P}  TRUE (evaluating the boolean does not change values)
+    * {P and B} S {P}: 
+          {(y <= x) and (x <> y)} y = y + 1 {y <= x}  ?
+  equiv.  {y < x} y = y + 1 {y <= x}  ?
+  equiv.  {y <= x -1}  y = y + 1 {y <= x}    TRUE (assignment axiom)
+
+     * {P and (not B)} => Q
+          ((y <= x) and (y = x)} => {y = x}   TRUE
+
+     Therefore P is a loop invariant. 
+     
+     Furthermore, the loop terminates: the precondition guarantees
+     that y is not larger than x, and the loop body increases by one
+     until it is equal to x, and all values are integers.
+       - this should be made formal (see book)
+
+    -  Therefore, {y <= x} is a loop invariant, and the axiom says:
+
+               {{y <= x} AND {x <> y}} y = y + 1 {y <= x}
+  ----------------------------------------------------------------------
+  {y <= x} while (x <> y)  do y = y+1 end while {{y <= x}  and {x = y}}}
+
+or
+
+               {y < x} y = y + 1 {y <= x}
+  -----------------------------------------------------
+  {y <= x} while (x <> y)  do y = y+1 end while {x = y}
+
+
+  The know the top part is true because of the assignment axiom
+  And the theorem is proven.
+
+  - It turns out that {y <= x} is also a weakest precondition
+    - see book for a formal argument
+
+  - Look in the book for more details, and especially the proof of
+    correctness of the factorial code on page 148.
+
+* Usefulness:
+  - very useful for program correctness proofs
+    - used 
+  - very limited in terms of conveying the semantics of a language
+    to programmers or compiler writers.
+
+=========================================================================
+* Denotational Semantics
+=========================================================================
+
+- The most rigorous, widely known method for describing the meaning
+  of programs, base on recursive function theory.
+
+- Fundamental concept:  define for each language entity both a
+  mathematical object and a function mapping instances of the language
+  entity to instances of the mathematical object. 
+    - Once we've done this, which is arguably difficult, then we can just
+      work with functions.
+
+* The classic example: binary numbers:
+
+  - BNF syntax:
+
+           <bin_num> --> 0 | 1 | <bin_num> 0 |<bin_num> 1
+
+  - We want to associate a semantic to each BNF production
+  - We define a function M_bin, that maps the syntactic objects
+    in the grammar rules to the objects in N, the set of non negative
+    integers.
+
+     M_bin ('0') = 0
+     M_bin ('1') = 1
+     M_bin ('<bin_num> 1') = 2 * M_bin('<bin_num>') + 1
+     M_bin ('<bin_num> 0') = 2 * M_bin('<bin_num>') 
+
+        <bin_num1> = 110   M_bin('<bin_num1>')? 
+
+        <bin_num1> --> <bin_num2> 0       
+	         M_bin ('<bin_num1'>) = M_bin('<bun_num2'>) * 2
+        <bin_num2> --> <bin_num3> 1 0     
+	         M_bin ('<bin_num2'>) = M_bin('<bun_num3'>) * 2 + 1
+        <bin_num3> --> 1
+	         M_bin ('<bin_num3'>) = 1
+
+
+	==> M_bin ('<bin_num1>') = ((1) * 2 + 1) * 2 = 6  
+
+  - This is easy for decimal numbers, but can we do something real?
+
+* State of a Program: 
+
+  - s = {(i1,v1),(i2,v2),...,(in,vn)}, 
+             where (ij,vj) is a variable/value pair
+ 
+  - varmap(ij,s) = vj   or   "undef"
+  - At the beginning of execution, all variables are undef
+  - Then one can assign values based on declarations
+
+* Simple sum expression:
+
+  <expr> --> <left_var> + <right_var>
+
+  M_e (x + y, s) = (if (or (eql (varmap x s) undef) 
+                           (eql (varmap y s) undef))
+                       'error
+                       (+ (varmap x s) (varmap y s)))
+
+  - this function maps an expression to a value (or error)
+  
+* Assignment Statement:
+
+  <assignment> --> <var> = <expr>
+
+  M_a ( x = E, s) = if (M_e(E) == error)
+                         then error
+			 else 
+			   s' = {(i1',v1'),...,(in',vn')}, where
+			     vj' = varmap(ij,s) if ij <> x and
+			     vj' = M_e(E) if ij = x
+			        
+  - this function maps a state to a state (or an error)
+        
+* Logical pretest loop:
+
+  M_l (while E do L, s) = if (M_e (E,s) == error)
+                            then error
+			    else
+			      if (!M_e(E,s))
+			        then s
+				else
+				  if (M_s(L,s) = error)
+				    then error
+				    else M_l (while B do L, M_s(L,s))
+				  endif
+			      endif
+			  endif
+
+  - this function maps a while loop to a state
+  - note that we assume that a function M_s exists
+
+* See the book (p. 153-154) for more detailed examples
+
+* Connection with interpretation
+
+  - In fact, the above functions can be written as code
+  - Say you want to write an interpreter of some language for which you have
+    defined all the above function
+  - Say the language is a simple subset of C, for instance
+  - Say you want to write the interpreter in Java
+  - For each production of the BNF grammar you can write an M function as above
+  - Here is very high-level pseudo code, assuming a bunch of classes are defined:
+
+     State M (Program p) {
+       return M(p.body, initialState(p.declarations));
+     }
+
+     State M (Statement s, State state) {
+       if (s isInstanceOf Assigment) return M ((Assignment) s, state);
+       if (s isInstanceOf Loop) return M ((Loop) s, state);
+       if (s isInstanceOf Block) return M ((Block) s, state);
+       ... 
+     }
+
+  - and so on, where for each rule of the abstract grammar you compute 
+    call an M function, as seen earlier, consuming the parse tree. 
+  - Eventually, the M functions do things such as compute values, check
+    types, change the state of the program, etc.
+  - The Java code (i.e., the interpreter) maintains the state of the program
+    (variables and their values), and thus simulates an actual machine. 
+  - Building the interpreter can be seen as replacing the semantic analysis steps
+    in the compilation pipeline by execution of some code that implements all  
+    denotational semantic functions. 
+  - For more complex things that simple statements, more work is required
+    - for instance, for functions, the interpreter must basically implement
+      the runtime stack and the heap!
+
+* Evaluation: 
+  - complex, and thus not very useful to language users
+  - excellent of concisely describing a language.
+  - great basis for an interpreter
