@@ -1,0 +1,344 @@
+========================================================
+* Control structures
+========================================================
+
+* History
+  - Control stmt in FORTRAN directly reflected the machine 
+    language instructions of the IBM 704
+  - it had a "selectable goto" (if condition then goto label)
+  - this statement is often sufficient to write a program but:
+       - poor readability and poor writeability
+  - can be replaced by a small number of control statements
+  - It has in fact been proven that all flowchart algorithms can
+    be coded with only two control statements:
+       - control flow path choice
+       - logically controlled iterations
+  - all common PLs have more than just these two to enhance
+    readability and writeability
+  
+  - Compound statements:
+    - Early versions of FORTRAN had no way of
+      forming statement collections
+    - compounding statements make it possible to abstract
+      a group of statements as a single statement
+    - introduced in ALGOL 60
+    - a block is a compound statement with a data
+      declaration added to the beginning (C, C++, Java)
+
+==============================================================
+* Unconditional Branches
+===============================================================
+
+- Goto:
+  - very powerful and flexible
+  - extremely dangerous and unreadable (spaghetti code)
+    - early Fortran code is ridden with GO TO's
+  - still available in several languages, but not used (often)
+    - for instance, you can do a goto in C
+    - no goto in Java (although some programmers always find a way
+      to emulate it, e.g., with do {  ... break; ...} while (false)}
+    
+=================================================================
+* Selection Statements
+=================================================================
+
+- Provides a means for choosing two or more execution paths in a program
+- Two classes:
+  - 2-way selection
+  - N-way selection
+
+* FORTRAN IV:  only a 1-way selector   
+   IF (boolean) statement
+   - only a single statement can be selected
+   - no nesting --> requires the use of GOTO
+       IF (X .NE. 2) GO TO 20      [ negative logic]
+         A = 1
+         J = 2
+       20  CONTINUE
+   - else clause requires another goto
+      IF (X .NE. 2) GO TO 20
+        A = 1
+      GOTO 30
+  20  CONTINUE
+      B = 1
+  30  CONTINUE
+
+* 2-way selection:
+  - Design issues:
+    - what is the type of the expression controlling the selector?
+    - what can be selected?
+      - single statement: limiting
+      - statement sequence: requires syntactic entry for termination
+      - compound statement: current way for modern languages
+    - how to deal with nesting?
+      - with semantic rule
+      - with syntactic entries for termination
+
+  - Examples:  
+    - ALGOL 60:  2-way selector
+        if (boolean) then
+          statement
+        else
+          statement 
+      - both statements can be compound
+    - Nesting:
+      - C:   if (sum == 0)
+               if (count == 0)
+                 results = 0;
+               else
+                 result = 1;
+
+      - In C, Java, and related languages, the static semantics
+        of the language specify that the "else" clause is always
+        matched with the most recent unpaired "then"  clause
+      - To force the alternate behavior, you must use a syntactic construct
+      - Using a syntactic construct is what ALGOL 60 did:
+
+            if sum = 0 then
+              begin
+              if count = 0 then
+                result := 0
+              else
+                result := 1
+              end
+
+           OR
+
+            if sum = 0 then
+              begin
+              if count = 0 then        [ like using { and } in C ]
+                result := 0
+              end
+            else
+              result := 1
+
+* N-way selection
+  - While everything can be done with 2-way selectors, it can become cumbersome
+  - Early days: FORTRAN, when people where experimenting with control structures
+    - three-way selector:   if (arithmetic expression)  S1, S2, S3. 
+ 	  S1 if expression < 0	
+	  S2 if expression == 0
+	  S3 if expression > 0
+      - typically used with GOTO's, and the user is responsible to
+        put additional GOTO's to ensure that only one statement is
+        executed
+    - computed GOTO:    GO TO (label1, label2, ..., labeln), expression
+        the expression must have an integer value:
+          if expression is 1, GO TO label1
+          if expression is 2, GO TO label2
+          etc...
+   - both of the above suffer from the "GOTO" problems:
+     - poor readability
+     - multiple entries into sections of code, which harms reliability:
+       - multiple entry example:
+		GO TO (foo1, foo2) X
+                ...
+          foo1: ...
+                ...
+          foo2: ...   <----- two ways to get here unless there is a GOTO foo3:
+                ...
+          foo3: ...
+
+      [Same problem with C case statement, as seen later]
+
+  - Modern case statement:
+       switch (expression) {
+         case constant_expression_1: stmt_1;
+         case constant_expression_2: stmt_2;
+         [default: stmt;]
+       }
+
+  - Specific design issues:
+    - Is the execution flow through the structure restricted to
+      a single selectable statement?
+      - in C, no UNLESS you put a break;
+      - less safe, but allows for more flexibility
+    - How should unrepresented selector expression values be
+      handled?
+      - in C, you put a "default" clause only if you want to
+      - potentially unsafe, but more flexible
+ 
+  - Limits to N-way selection
+      Ada:  if (count < 10) then X := 1;
+            elsif (count < 100) then X := 2;
+            elsif (count < 1000) then X := 3;
+            end if;
+
+      Not easily simulated with a case statement because of boolean expressions
+      In fact, if-then-elsif is the most general selection construct.
+
+      No such problem in LISP:
+          (cond ((< count 10) 1)
+                ((< count 100) 2)
+                ((< count 1000) 3))
+      
+=================================================================
+* Iterative Statements
+=================================================================
+
+- Design questions:
+  - how is the iteration controlled?
+  - where does the control mechanisms appear?
+
+- counter-controlled:
+  - loop variable with an initial value, a step size, and a final value
+  - issues:
+    - type and scope of the loop variable?
+    - value of the loop variable at loop termination?
+    - can the value of the loop variable and/or loop
+      parameters can be changed in the loop, and if so,
+      what is the impact on the loop?
+    - loop parameter evaluation: only once? or once at
+      each iteration? 
+
+  - See book chapter 8 for examples in different languages
+     - We'll use C as an example:
+        for (expression1; expression2; expression3;) {body}
+  - C for instance allows the loop variables to be modified at will,
+    which can harm readability a lot.
+  - The way to really understand how these work is to use
+    operational semantics:
+
+        for (expression1; expression2; expression3;) {body}
+
+     has the following semantics:
+
+           expression1
+     loop: if not expression2 goto out
+           body
+           expression3
+           goto loop:
+      out: noop
+    
+  - Example: A non-intuitive C loop
+     for (count1 = 0, count2 = 1;
+          count1 <= 10 && count2 <= sum;
+          sum = ++count1 + count2, count2 *= 3) {count1 += count2;}
+
+           count1 = 0;                            [init]
+           count2 = 1;                            [init]
+     loop: if (count1 > 10) goto out              [pretest]
+           if (count2 > sum) goto out             [pretest]
+           count1 = count1 + count2;              [loop body]
+           count1 = count1 + 1;                   [loop var update]
+           sum = count1 + count2;                 [loop var update]
+           count2 = 3 * count2;                   [loop var update]
+           goto loop
+      out: noop
+
+      - What would happen if loop variables were updated before executing
+        the loop body?
+
+  -  C loops are about as unsafe as it gets because there is no really notion
+    of loop variables, but rather of "expressions" that are evaluated (remember
+    that '=' is an operator just like '+', it just has a side effect).
+
+- Logically controlled loops
+  - issue: pretest or posttest?
+
+        while (expr)      [pretest]
+          stmt;
+
+        do                
+          stmt;
+        while (expression)    [postest]
+
+  - issue: can there be arbitrary exits?
+
+         while (expr) { 
+           ...
+           break;
+           ...
+         }
+
+      only breaks from the current loop. Makes it difficult to break
+      out of a nest of loops:
+
+	  while (expr1) {
+            while (expr2) {
+               ..
+               break;
+            }
+            ..  <------ this will be executed after the "break"
+          }
+
+  - issue: can one arbitrarily skip an iteration?
+
+         while (expr) { 
+           ...
+           continue;
+           ...
+         }
+
+      go back to the top of the loop, skipping the rest of the body
+
+      Like for the iterative loops, really complex, nested loops with
+      breaks and continue require operational semantics. 
+ 
+  - read Chapter 8
+
+- Iteration based on data structures 
+  - Lisp:  we have seen mapcar
+  - Perl:  @names = ("a","b","c");
+           foreach $name (@names) {
+             print "$name\n";
+            }
+  - User defined iterators have arisen with the advent of OO programming
+         (Iterators in C++)
+
+=================================================================
+* Guarded commands
+=================================================================
+
+* Early work: Non-deterministic control structures
+  - People have been looking at many ways to do selection. 
+  - Dijkstra (shortest path) wanted to provide control statements
+    that ensured correctness rather than mandating verification or testing
+
+  if  <boolean> -> <stmt>
+  []  <boolean> -> <stmt>
+  []  <boolean> -> <stmt>
+  fi
+
+  [] is called a fatbar
+
+  - Looks like multiple selection but fundamentally different
+    - All expressions are evaluated 
+    - If more than one expression is true, then one of the statements
+      is chosen non-deterministically!
+    - If none is true, then termination!
+
+  - Example: computing the max
+
+    if x >= y -> max = x
+    [] y >= x -> max = y
+    fi
+
+  - Guarded do loops:
+
+    do  <boolean> -> <stmt>
+    []  <boolean> -> <stmt>
+    []  <boolean> -> <stmt>
+    od
+
+    - loops while at least one of the boolean is true
+      terminates when they are all false
+    - Example:
+      do  x1 > x2 -> swap(x1,x2);  (A)
+      []  x2 > x3 -> swap(x2,x3);  (B)
+      []  x3 > x4 -> swap(x3,x4);  (C)
+      od
+
+      - Sorts x1, x2, x3, and x4
+
+                                     x2 x4 x3 x1  
+             (A) and (C): pick (C)   x2 x3 x4 x1      
+             (A): pick (A)           x1 x3 x4 x2      
+             (B): pick (B)           x1 x2 x4 x3
+             (C): pick (C)           x1 x2 x3 x4
+
+  - Non-determinism: 
+    - a useful thing to have in a language to make random choices
+    - particularly useful when writing concurrent programs:
+      - e.g. choosing next task to execute? 
+
