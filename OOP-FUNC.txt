@@ -1,0 +1,681 @@
+=========================================================================
+* Language categories
+=========================================================================
+
+* Traditionally, languages are placed into 4 categories
+
+  1. imperative
+  2. object oriented
+  3. functional
+  4. logic
+
+=========================================================================
+* Imperative PLs
+=========================================================================
+  
+* General Concepts
+
+  - The older languages are imperative and most
+      other languages evolved out of imperative languages  
+  - Imperative languages are the most intuitive
+  - Created to mimic the actions of a computer: CPU + Memory
+  - Von Neumann (see Chapter 1)
+
+    CPU  <---> Control Unit
+           | 
+         Memory (both instruction and data)
+
+	fetch-decode-execute cycle
+
+  - key ingredients: variables, assignments , expressions + iterations
+
+  - A high-level language based on variables, assignments, expression
+   evaluations, and iterations can be translated to efficient machine
+   language
+
+  - C is the imperative language that we will reference in this course
+
+	int fact(int n) { 
+	  int sofar = 1; 
+	  while (n > 0) sofar *= n--;
+	  return sofar;
+	}
+
+  - The value of the variables changes over time so the order in which
+    the statements are executed is critical. The values of all the
+    variables defines the "state" of the program.
+
+  - This may seem obvious, but we will see languages in which
+    the order of statements in the program does not matter, where there are
+    no assignments, and no concept of a changeable "current value" of a
+    variable, or of variable at all!
+
+* A few important imperative PLs
+
+  - FORTRAN: (1954) 
+    - For scientific computing (floating point)
+    - stands for FORmula TRANslation
+    - Developed for the IMB 704
+    - First widely accepted compiled high-level language
+    - the assumption was that high-level PLs
+      would eliminate bugs and programming errors!
+
+    - FORTRAN 0 in 1954, 4 versions before F77, and the F90. 
+    - one key to its success: achieve FAST execution close to machine code
+    	(due to simple scientific applications) 
+    - separate compilation (to tolerate machine failure!)
+    - Millions of lines of code written in Fortran
+
+    - Misses a lot of features of modern languages and
+      thus is often hated by today's programmers
+      	 	- e.g, no dynamic memory
+                
+    - Maybe one of the most successful languages ever
+
+    LESSON: A flawed language can be very successful 
+      (it was the first, which helped, and it's still alive today)
+
+
+  - ALGOL (1960)
+    - For scientific programming but more general/advanced than FORTRAN
+    - designed by an international committee
+      - A => B  ---> B := A   because of the Americans
+    - ALGOL 1958 report received with a lot of enthusiasm
+    - new version in 1968
+    - very orthogonal
+
+    - FUNDAMENTAL inspiration for other languages: 
+        - block structures, scoping
+        - recursion (LISP was already providing that)
+	- stack-dynamic arrays (dynamic memory)
+    - First language designed to be machine independent
+    - First language to have its grammar formally described in BNF
+
+    - Didn't replace FORTRAN and ultimately disappeared:
+      - Difficult to launch a new language
+      - lack of output statements!
+      - Grammar described in BNF (too ahead of its time)
+      - IBM didn't want to invest time into it, they already
+        had gone through the pain with FORTRAN (why bother when
+        you have the monopoly of machines with your language and
+        when most people are forced to buy into your technology anyway?)
+
+    - used as a formal way to communicate algorithms in the
+      literature (for 20 years)
+      - now people use ad-hoc pseudo-code
+
+    LESSON: even a good language may not win
+
+  - COBOL (1960)
+    - For broadening the base of computer usage to business applications
+    - Philosophy: Should look like English so that managers could write/read code
+         RECORD CONTAINS 80 CHARACTERS       char s[80];
+    - great debate: no subscripts! no arithmetic expressions? 
+      - such things can be too "difficult" for business people
+
+    - Good data structure advances when compared to FORTRAN
+    - No real computation advances (e.g., no functions)
+
+    - Very successful: Millions of lines of code (Y2K)
+    - But very little impact on other languages
+    - Generally considered a poor language
+    - STRONGLY supported by DoD, and would probably have died otherwise 
+        (similar to FORTRAN and IBM in this way)
+    - well targeted and well supported, hence successful
+
+    LESSON: Even a successful language can have no impact on PLs
+
+  - PL/1 (1965)
+    - First language that aimed at a broad spectrum of apps  
+    - In the early 60s the World was well partitioned:
+       -  IBM 7090   used for scientific computing (floating point with FORTRAN)
+       -  IBM 7080   used for business (decimal and structure with COBOL)
+    - But in 1963:  business started using computation
+                     scientists started manipulating records
+    --> IBM 360 computer with a new language: PL/1
+    - PL/1 was to replace/combine FORTRAN, ALGOL, COBOL, etc...
+    - Introduced a few key concepts:
+      - first exception
+      - first pointers as a data type
+    - In effect: took a bunch of stuff and threw it in
+    - It appears naive that so many constructs could have been
+      combined successfully
+ 
+      "When FORTRAN has been called an infantile disorder, PL/I,
+       with its growth characteristics of a dangerous tumor, could turn
+       out to be a fatal disease." (Edsger Dijkstra)
+
+    - Even with IBM support, PL/1 died eventually and is considered a failure.
+    - It still enjoyed a much better success than ALGOL, which was a better
+      language
+
+    LESSON: "Bloated" languages don't work
+            (But then C++ cannot be called a failure...)
+
+  - Ada (1983, 1995)
+    - 1974: more than 450 PLs were in use for DoD projects
+    - Ada: focus on reliability
+    - Largest language design effort ("design by committee")
+       - extensive management of exception
+       - concurrent execution
+    - developing a compiler was really hard
+    - the committee organized a competition, and eventually HoneyWell/Bull won. 
+    - eventually proved to be too complex: 
+
+	 "so large that it should not be used for apps for which
+	  reliability is critical!", Hoare 1981
+
+    - DoD does not require it any longer
+    - Ada95: takes Ada83 and adds object-orientation (similar to: C --> C++)
+
+    LESSON: design-by-large-committee can fail
+
+  - C (1971) Kernigan and Richie
+    -  ALGOL --> CPL --> BCPL --> B --> C
+    - 1989: ANSI C
+       - added a number of things, including type-checking on function prototypes
+  
+    - a major reason for its success is that it is part of UNIX,
+      and which each UNIX system comes a (good) C compiler.
+    - Uses a preprocessor, for defining macros
+    - Is a weird combination of a high level language in which
+      you can write code that looks a lot like assembly
+    - notoriously difficult to master as it leaves the programmer
+      responsible for a lot of things, e.g. memory manageent. this
+      of course makes it very flexible and easier to write optmized code.
+       - Most common source of error: memory overwrites
+    - large standard libraries
+
+* Amazing number and diversity of imperative PLs:
+  
+  - BASIC:
+     - designed at Dartmouth for teaching computers to liberal
+       art students.
+     - key concept: user time is more important than computer time,
+       assuming that computers would become cheaper!
+    
+  - Pascal:
+     - descendent from ALGOL
+     - used for teaching computer programming
+    
+  - Simula, 1967:
+     - for writing computer simulations
+     - key concept: data abstraction via a class construct
+     
+  - Read Chapter 2.
+
+  - Some of them are real oddities: 
+
+    - APL (A Programming Language) (1975)
+      - Created at IBM
+      - dynamic scoping, right-to-left evaluation, very high-level
+      - no readability/maintainability (see class Website)
+      - 4 hours to understand a 4-line program (Daniel McCracken, 1970). 
+      - many new symbols. Special keyboard (see class Website).
+      - Factorial in APL: X / l X   (Iota)
+
+
+* Lessons: 
+     - It is hard to design a successful language (see criteria in first lecture)
+     - While some of these languages failed, they had major impact (ALGOL 60)
+     - Some successful languages had very little impact (COBOL)
+     - Some language are good, but so hard to implement that they fail
+       (ALGOL 68, Ada)
+     - Design by (large) committee often fails (Ada)
+     - Industrial support for a language is key to its acceptance (FORTRAN, COBOL)
+
+
+=========================================================================
+* Object oriented (OO) PLs
+=========================================================================
+
+* Motivation: 
+  - Abstract Data Types: Package the data type AND its functions together in
+    a single "module" so that the functions provide a public interface to the type
+    - A powerful idea that makes it possible to write large software systems
+    - Example:  
+      - modules in Modula-2
+      - packages in Ada
+    - In C on can sort of do this, but the programmer/user has to be well-behaved
+      - example: a stack abstract data type in C
+
+  - Problems with modules 
+    - no standard way to extend the data abstraction
+      - "go in" the code
+      - understand its implementation
+      - add to it 
+      - what's needed: inheritance
+    - no standard way to initialize the abstract data type
+      - there is typically some type of init function
+      - if the user doesn't call it, nothing works
+      - the only hope is that the user reads the documentation
+      - cannot be ensured by the compiler
+      - same problem for cleaning up the abstract data type
+      - what's needed: a constructor and a destructor
+
+  - Hence the Object-Oriented model
+
+* A traditional way to look at OO PLs is: imperative + classes
+  - This is definitely the C++ approach
+  - But there are OO PLs that are not imperative (e.g., functional PLs)
+
+
+* Programs are designed using objects, i.e., encapsulated pieces of data
+  that know how to do things:
+  - Not "the computer knows how to move the point"
+  - But "The point knows how to move itself"
+
+* Major concepts: 
+  - Object: encapsulation of data and code. 
+  - Field (or Variables, or Attribute): the data
+  - Method: the code
+
+  - Class: a template for objects (similar to an abstract data type)
+  - Each object is an instantiation of a class
+
+* Paradigm: objects sending messages to objects:
+  - You don't operate on a object
+  - You tell the object to operate on itself
+  - rather subtle but really powerful
+
+* Example
+  - Class "Car" with three methods: start(), stop(), and brake()
+
+      Car car;
+      car = new Car();
+      car.start();
+
+* Properties: 
+  - Encapsulation: Hiding internal state
+    - separates implementation from use. 
+    - allows for non-disruptive code modification.
+    - implemented with protection of fields and methods (private vs. public)
+    - Well-known software engineering principle that is nicely mapped onto
+      by objects with public/private methods and fields.
+      - i.e, you can implement some level of encapslulation with non-OO PLs
+
+       Car:   private doublespeed;
+              public int getSpeed();
+
+  - Inheritance: specialization 
+    - class B is like class A but with a few more specific features.
+    - enables code-reuse. 
+    - A typical application is an entire hierarchy of class. 
+    - More difficult to emulate in a non-OO PLs than encapsulation
+
+      ManualCar extends Car
+      ManualCar adds the shift() method
+                modifies the stop() method
+
+  - Polymorphism and Dynamic Binding
+    - A variable of type A can reference any object from class A OR ANY derived class
+    - The child class can override a method that is defined by the parent. 
+    - When a method is called, the call is bound to the right method DYNAMICALLY.
+
+         Car car;
+         car = new ManualCar();
+         car.stop();  <----- dynamically bound to ManualCar.stop().
+
+* OO programming is not the same as using an OO PL:
+  - It is possible to program in an OO fashion with a
+    non-OO PL and conversely. However, the two should
+    generally go together.
+
+* Java is the language we will reference in the class
+
+    Factorial in Java
+
+    public class MyInt {
+      private int value;
+      public MyInt (int value) {
+        this.value=value;
+      }
+      public int getValue() {
+        return value;
+      }
+      public MyInt getFact() {
+                    return new MyInt(fact(value));
+      }
+      private int fact(int n) {
+        int sofar = 1;
+        while (n>1) sofar *= n--;
+        return sofar;
+      }
+    }
+
+  - This looks wordy but it is not a fair comparison to C for such a simple
+    program. The value of OO programming is apparent when managing large
+    and complex software projects.
+
+  - Looks similar to C, but encapsulate data and functionalities
+    into objects that can be manipulated.
+
+* A few important OO PLs
+
+  - Smalltalk (1969)
+    - The quitessential OO Pl
+    - Although data encapsulation and abstract data type were
+      somewhat introduced in Simula, SmallTalk nailed it
+    - Unlike C++ and Ada95, it was really designed to support only
+      object oriented programming
+    - EVERYTHING is an object (i.e. constants are objects)
+    - Hence, major performance hit, which limited its applicability
+       - note: The "OO is slow" syndrome is due to dynamic binding
+    - The biggest impact of Smalltalk that it advanced OO programming
+    - Other impact: mouse/window (Xerox Park research)
+
+  - C++ (1980)
+    - Basically, it's C with classes
+    - Backward compatible with C 
+    - Very sophisticated/intricate inheritance: 
+      - provides highly detailed control over class members
+        - public, private, protected, friend
+           class A { public x; protected y; private z; friend C;}
+           class B : public A {...}
+           class C {...; friend E}
+           class D : public C {...}
+           class E {...}
+		A can access x, y, and z
+                B can access x, y
+		C can access x, y, and z
+		D can access x
+                E can access x
+    - multiple inheritance 
+      - Most programmers agree it's more pain than value
+      - Java doesn't do it but has something called interfaces.
+    - Less elegant/simple than Smalltalk
+    - Large and complex language
+      - people often use a subset of C++ (many programmers never use multiple inherit)
+    - Unsafe but good performance (just like C)
+    - Large Standard Template Library
+
+  - Java (1995)
+    - philosophically is a bit like moving back to Smalltalk from C++
+    - History:
+       - 1991: The "Green Team," 13 people, was chartered by
+         Sun to anticipate and plan for the "next wave" in computing:
+         convergence of digitally controlled consumer devices and computers.
+       - To demonstrate what they saw as a possible future in digital devices,
+         the Green Team locked themselves away in an anonymous office cut all
+         regular communications with Sun, and worked around the clock for 18
+         months. In the summer of 1992, they emerged with a working demo, an
+         interactive, handheld home-entertainment device controller with an
+         animated touchscreen user interface.
+       - After they realized that there wasn't a business in digital cable
+         television, they turned to the Internet.
+       - The team returned to work up a Java technology-based clone of Mosaic
+         they named "WebRunner" (after the movie Blade Runner), later to become
+         officially known as the HotJavaTM browser. It was 1994.
+       - Demo at the: Technology, Entertainment and Design Conference
+         WebRunner was just a demo, but an impressive one: It brought to
+         life, for the first time, animated, moving objects and dynamic
+         executable content inside a Web browser.  (James Gosling helped for the demo)
+       - The language took off from then
+       - 1995: Netscape licenses Java in its browser
+    - Success due to the platform, more than to the language
+    - Fastest growing language ever, due to the Web
+    - 3 distinct aspect:
+          - the Language
+          - the runtime system (JVM)
+          - the Java packages
+    - Java: trade-off between Smalltalk and C++
+       - Smalltalk: only classes (orthogonality up, perf down)
+       - C++: struct type (orthogonality down, perf up)
+       - Java: types + classes  (tradeoff)
+    - More OO than C++:
+       - every class has a parent (Object)
+            (some operations are universally supported, like toString(), finalize())
+       - no stand-alone program
+    - No pointers, only references.
+       - A pointer is just an address of a piece of memory
+       - A reference is the address of an object in memory.
+    - No "friend" relationships
+    - No multiple inheritance:
+      - Multiple inheritance is bad
+        - confusing to people who read programs
+         
+        - name collision:    A.x      B.x
+                              \       /
+                               \     /
+                                 C.x??
+
+        - diamond inheritance
+
+                                A.x
+                               / \
+                              B   C           B and C both inherit x
+                               \ /            Does D inherit 2 x fields or one?
+                                D
+         
+       - This can be resolved by language design (C++), but is it worth the
+         additional complexity? 
+         - Java decided against it.
+     - Multiple inheritance is good:
+        - An applet that does an animation is BOTH an applet and a thread!
+        - public class MyApplet extends Apples implements Runnable
+        - "implements Runnable" declares that the apples knows how to do some
+          thread stufff, and it is some type of multiple inheritance.
+    - Generics:
+      - C++ implemnents "templates" to define your own abstract data types.
+        - the STL is huge and has stuff like vectors, list, stacks, etc..
+      - Generics are just "class generators"
+        - better type checking
+        - more code reuse
+      - Generics appear in JDK 1.5
+         - WITHOUT GENERICS: 
+            // Everything being an object, one just implements a list of objects
+            // (note that one cannot have a list of "int" since "int" is
+            //  a basic type)
+            List myIntList = new LinkedList(); // list of "Objects"
+            myIntList.add(new Integer(0));
+            Integer x = (Integer) myIntList.iterator().next(); // Annoying cast
+            // The above cast can introduce runtime error if the programmer
+            // doesn't do the right cast. The compiler cannot check the type.
+
+         - WITH GENERICS:
+            List<Integer> myIntList = new LinkedList<Integer>(); // list of "Integers"
+            myIntList.add(new Integer(0));
+            Integer x = myIntList.iterator().next();
+            // In the above code, the compiler can check types. 
+
+      - Again, Java made some compromise with C++
+
+  - A few interesting between C++ and Java
+    - a = b,  where a and b are objects
+      - in C++: the object is copied
+      - in Java: one only manipulate object references
+        - a = b.clone() 
+    - Method dispatching
+      - in Java: 
+        - all dispatching is done at runtime by default
+        - unless the method is declared as "final"
+        - "pure" OO programming
+      - in C++:
+        - by default dispatching is done at compile time
+        - unless the method is declared as "virtual"
+        - efficiency
+
+  - C# (2002)
+    - Purpose: provide a language for programming component-based
+      software in the .NET framework.  
+    - .NET supports other languages (5 total), and all languages use
+      the same type system and are translated to Intermediate Language (IL),
+      which is then compiled to machine code.
+    - Interestingly, C# is sort of a "going back to C++ from Java":
+       - enum types are back
+       - struct types are back
+       - ...
+    - But, improved version of C++ constructs:
+       - enum types are type-safe (not cast to ints)
+       - structs are just a way to extend the basic set of data types (they
+         are allocated on the stack or in-line only, not on the heap)
+       - operator overloading (more restricted than in C++)
+       - pass by reference (more restricted than in C++)
+       - pointer arithmetic!! (with "unsafe" keyword)
+    - And other things from other languages:
+      - foreach statement (like in Perl)
+    - See http://genamics.com/developer/csharp_comparative.htm
+
+ - Interesting to see the evolution:
+   - Smalltalk: clean and pure
+   - C++: throw everything in
+   - Java: arghh.... remove a bunch of stuff
+           well, let's keep a form of multiple inheritance
+           well, ok, let's put generics back in
+   - C#: let's be reasonable and think about how to put stuff back in
+         a way that will be better than C++
+
+* Others OO languages:
+     - Eiffel, Ada 95 (covered in the book)
+
+===========================================================
+* Functional PLs
+===========================================================
+  
+- Main idea: a program is a mathematical function
+  - mathematical functions are an elegant way to encode algorithms
+  - Mathematical functions have no side effect 
+     - they always return the same value given the same set of args 
+       - not true with "global variables"
+     1. a function defines a value, rather than a sequence of
+        operations on values in memory
+     2. a funct. PL has no variables in the sense of an
+        imperative language, thus no side effects
+- main mechanisms in a functional PL are recursion and conditional
+  expressions rather than by sequencing and iteration  as in
+  most imperative languages.
+- However, most functional languages are not "purely" functional. They
+  provide ways to do iteration, and they provide ways to do side-effects.
+  But the general programming etiquette is not to abuse of these capabilities.
+- Common Lisp is the language we will use in the class
+
+    (defun fact(x)
+         (if (<= x 0) 
+	     1 
+	     (* x (fact (- x 1)))))
+
+- C provides recursion and you could implement this in recursive C
+- Lisp provides iteration and you could implement this as in iterative C
+- The point is that the language is more or less conducive to a certain
+  style of programming.  (you can write Java that looks like C, you can
+  write C that looks like FORTRAN, but why?)
+
+- Positive 
+  - program at a higher level
+  - easier for problems that are functional in nature
+  - simple syntax
+    - No (few) side effects, which makes it easier to reason about the
+       correctness of a program (simple graph model)
+- Negative
+  - efficient execution is difficult 
+    - we are further away from the Von Neuman model, from the architecture
+- Impact of functional programming: AI, PL research, a bunch of cool software
+
+- Two descendent of LISP: 
+  - Scheme (1975): functions a first-class objects and static scoping
+  - Common Lisp (1984): effort to standardize - large and complex
+
+- ML (1980): functional but also supports imperative programming,
+             syntax looks like C, uses type inferencing and is strongly
+             typed! (very different from LISP-like languages)
+
+- Haskell (1992): purely functional, lazy evaluation, use of infinite lists.
+
+- We will refer to these in the class when needed
+
+=========================================================
+* Logic PL
+=========================================================
+
+- Really different from the previous categories
+- a program is expressed in symbolic logic 
+- the language system uses logical inferencing to produce results
+- Application: AI, database management, theorem proving
+- Logic programs are declarative 
+  - The programmer writes the specification of the desired result, 
+    rather than the way to obtain the result.
+  - The movitating philosophy is:
+    - Having to write how the program should do things is difficult
+    - Having to write what one wishes to obtain should be easy. 
+- You don't run a logic program
+  - you ask questions 
+  - the language system tries to answer them.  
+  - This is called "non-procedural"
+- Of course, this is not magical
+  - major performance issues.
+
+- Prolog is the language we will use in this class
+- It is one of the two most popular languages in AI (with Lisp)
+
+    fact(1,1).
+    fact(X,Fact) :-
+      NewX is X-1,
+      fact(NewX, NF),
+      Fact is X * NF.
+
+- Prolog programs can look very different from imperative programs
+     X = foo.
+   X is not a variable
+   foo is neither a variable nor a string
+   = is not an assignment
+- Prolog has a very simple syntax with only a few constructs
+- Other logic PLs: lambda-prolog, Godel, Escher, Curry, Mercury, ...
+
+==============================================================
+* Compilation and Interpretation
+==============================================================
+
+
+* Compilation:  
+
+  - a program is translated to machine language which
+    can be directly executed on the computer. 
+
+   Editor --> source file --> Compiler --> assembly language file
+          --> Assembler --> object file --> linker --> executable file
+          --> Loader --> running program in memory
+
+  - Advantage of compilation: fast executables
+  - May be difficult to write a compiler:
+      - early days: FORTRAN  (compiler technollogy was not well understood)
+      - if the language is really large: Ada
+      - for functional/logic languages 
+           (no direct mapping to the von Neuman model)
+
+* Interpretation:
+
+  - the interpreter is really a simulation of a machines whose
+    fetch-execute cycle deals with high-level languages
+    - each statement is tokenized, parsed, semantically checked, 
+      and then "interpreted"
+    - we'll see some ways in which one would write an interpreter
+      when we talk about semantics. 
+  - slow at execution (esp. for a high level language) 
+    - whereas compiling is slow up front
+  - Was the method of choice initially
+       - bottleneck of was not the interpretation cost 
+         but the floating point emulation cost
+         (before hardware support for floating point arithmetic)
+      - IBM 704 changed all that.
+  - good for debugging and rapid development
+    - mapping between source line and error
+    - easy to do step by step execution, to look at program state, even
+      run code on the fly during execution.
+  - sometimes languages provide both:
+    - interpretation for develpt and debugging
+    - compilation to generate the final, fast executable
+    - This is the case with Common Lisp and Prolog for instance.
+
+* Hybrid: 
+
+  - Java
+    - compilation generates byte code
+    - the Java Virtual Machine interprets the byte code
+      - faster than interpreting a high-level language
+    - benefits: 
+      - portability
+      - security (the program is never in control of the hardware directly)
+    - Yet: JIT avoids all interpretation
+
+In this course we will use Common Lisp and Prolog in interpreted mode
+
