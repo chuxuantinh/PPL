@@ -1,0 +1,295 @@
+==============================================
+* Subprograms
+==============================================
+
+- One of the two fundamental abstractions used when writing programs
+  (the other one being data abstraction)
+- Refers to functions, procedures, methods, lambda forms, etc.
+  - functions: returns a value
+  - procedure: produces results by modifying globals by
+               modifying passed parameters
+- Characteristics:
+  - Way to change the flow of control
+  - Single entry point
+  - Calling program is suspended during subprogram execution
+  - Control always returns to caller
+- Terminology
+  - Subprogram definition: interface + operations of the subprogram
+  - Parameter profile: number, order, and type of parameters
+  - Protocol (or signature): parameter profile + return type
+
+- Parameters
+  - Formal parameters: appear in the definition
+  - Actual parameters: appear in the call
+  - Two kinds:
+    - Positional parameters: correspondence between formal and actual
+      parameters determined by position in parameter list
+    - Keyword parameters: correspondence determined by a keyword
+      - Example: Common Lisp
+             (defun foo (x y) (- x y))        positional
+             (defun foo (&key x y) (- x y))   keyword
+
+                    (foo :y 2 :x 6)
+  - Default values are allowed in some languages (Ada, C++, CL)
+             (defun foo (&key (x 2) (y 4)) (- x y))   keyword + defaults
+
+- Activation Records: where parameters are stored at runtime
+
+       -------------------- <---- Stack Pointer
+       |  Stack Dynamic   |
+       |  Local Variables |
+       |                  |
+       --------------------
+       |                  |
+       |    Parameters    |
+       |                  |       ^
+       --------------------       |
+       |                  |       |
+       |     Stuff        |       |
+       |                  |       |
+       --------------------       |
+
+	   Runtime Stack
+
+* Issues for Subprograms:
+  - Type checking of actual parameters vs. formal
+    - now known to be a good idea (C --> ANSI C)
+  - Parameter passing methods
+  - Passing subprograms as parameters
+         (we'll see when we talk of scoping)
+  - Nesting of subprogram definitions 
+         (we'll see when we talk of scoping)
+
+===================================================
+* Parameter passing:
+===================================================
+
+- Conceptually, there are 3 modes:
+
+     		Caller  		Callee
+
+              sub(a,b,c)        procedure sub(x,y,z)
+
+In mode        a      ------------->         x
+
+Out mode       b      <-------------         y
+
+InOut mode     c      <------------>         z
+
+
+  - Some languages make this implicit in declarations:
+    - Pascal:  procedure sub (in x: int, out y: int, in out z: int)
+
+- Four parameter passing methods/implementations:
+  - pass-by-value
+  - pass-by-result
+  - pass-by-value-result
+  - pass-by-reference
+  - pass-by-name (an oddity)
+
+- Pass-by-value: Only for "in" parameters
+  - Value of actual parameter is used to initiate the
+    corresponding formal parameter
+  - Formal parameter acts as local variable in the subprogram
+  - Normally implemented by physical copy
+
+       Example:
+
+          void caller() { 		void callee(int a) {
+            int a = 2;			  a = a + 1;
+            callee(a);                  }
+          }
+
+          |           |			|           |
+          -------------                 -------------
+          |     2     |  --------->     |  2 -> 3   |   
+   AR     - - - - - - -                 - - - - - - -
+   for    |           | 		|           |
+  caller  |           | 		|           |    AR for callee
+          -------------                 -------------
+
+  - Advantage: simple 
+  - Disadvantage: copying the value can be expensive in time and memory,
+                  depending on what is copied (for instance a large struct)
+
+- Pass-by-result: Only for Out parameters
+  - No value is transmitted to the caller 
+  - Formal parameter acts as a local variable, and is copied to the
+    caller when the control is passed back to the caller.
+  - Normally implemented by physical copy
+
+       Example:
+
+          void caller() { 		void callee(int a) {
+            int a = 2;			  a =  3;
+            callee(a);                  }
+          }
+
+          |           |			|           |
+          -------------                 -------------
+          | 2 --> 3   |  <---------     |     3     |    
+   AR     - - - - - - -                 - - - - - - -
+   for    |           | 		|           |
+  caller  |           | 		|           |    AR for callee
+          -------------                 -------------
+
+  - Advantage: simple 
+  - Disadvantage: copying the value can be expensive in time and memory,
+                  depending on what is copied
+                   
+- Pass-by-value-result: For In-Out parameters
+  - Combination of pass-by-value and pass-by-result.
+
+       Example:
+
+          void caller() { 		void callee(int a) {
+            int a = 2;			  a = a + 3;
+            callee(a);                  }
+          }
+
+          |           |			|           |
+          -------------                 -------------
+          | 2 --> 5   |   <-------->    | 2 --> 5   |  
+   AR     - - - - - - -                 - - - - - - -
+   for    |           | 		|           |
+  caller  |           | 		|           |    AR for callee
+          -------------                 -------------
+
+  - Advantage: simple 
+  - Disadvantage: copying the value can be expensive in time and memory,
+                  depending on what is copied
+
+- Pass-by-reference: For In-Out parameters
+  - Transmits not a value but an "access path" (i.e. an address)
+  - Actual parameter is "shared" with the callee
+
+       Example:
+
+          void caller() { 		void callee(int a) {
+            int a = 2;			  a = a + 3;
+            callee(a);                  }
+          }
+
+          |           |			|           |
+          -------------                 -------------
+          |    2      |                 |    @(a)   |  
+ @(a) --> - - - - - - -                 - - - - - - -
+          |           | 		|           |
+caller AR |           | 		|           |    AT for callee
+          -------------                 -------------
+
+
+  - Every occurrence of "a" in the callee points to the original
+    location of "a" in the caller.  
+  - This is done by the compiler, which generates code for the indirection
+
+  - Advantage: time and space efficient
+  - Disadvantage: Access to parameter is slower (indirection)
+                  Unsafe (e.g., if only 1-way communication is required)
+                  Aliasing: 
+                        void fun(int *first, int *second)
+
+                        fun(&x, &x)
+
+			instances of first and second in the code of fun
+			both reference the same memory cell, which can
+			cause problems.
+
+- Pass-by-name: for In-Out parameters
+  - Sort of an oddity that was contemplated for a while
+  - Actual parameters is textually substituted for the corresponding
+    formal parameter in all its occurrences in the callee.
+  - BUT: The parameter is evaluated in the CALLER's context
+         It is bound to an "access method" called a "thunk" that
+         performs the evaluation
+  - We're going to see examples, but it turns out that:
+    - if parameter is a scalar variable: 
+            pass-by-name is equivalent to pass-by-reference
+    - if parameter is a constant: 
+            pass-by-name is equivalent to pass-by-value
+    - if parameter is an array element: 
+            pass-by-name is unlike anything else
+    - if parameter is an expression containing variables: 
+            pass-by-name is unlike anything else
+
+        Example: 
+
+	    void main() {
+              int i = 0;
+              int x[2] = {0,1};
+
+              foo(i,x[i]);
+              printf("%d %d\n",x[0],x[1]);
+            }
+
+            int foo(int a, int b) {
+              int i = 100;
+              a++;
+              b = 2;
+            }
+
+    - The above program prints "2 1" under pass-by-reference
+    - The above program prints "0 2" under pass-by-name
+         a++ will increase the value of 'i' in main by 1, setting it to 1
+         b = 2, will set x[i] to to, where x[i] is evaluated in the caller's
+           context. Thus, since i is now equal to 1, we set x[1] to 2;
+         WARNING: The 'i' declared in foo is never taken into account because
+                  in call-by-name one evaluates the arguments in the context of
+                  the caller! So one uses the 'i' declared in main.
+         Result: x[0] = 0, x[1] = 2;
+
+  - Advantage: Flexibility (very clever algorithms can be
+                          implemented if one knows what one's doing)
+  - Disadvantage: Execution inefficiency
+                  difficult to implement
+                  not readable/writable
+                  Some things cannot be implemented
+
+- Pass-by-value-result can differ from pass-by-reference, when there
+  are global variables.
+
+  Example:
+
+        int x = 0;
+        int main() {
+          foo(x);
+        }
+
+        void foo(int a) {
+          x = 3;
+          a++;
+        }
+
+     - pass by value-result:
+        - parameter a in foo is initially set to value 0, and
+          considered as a local variable.
+        - then global variable x is set to 3
+        - then the value of a is incremented from 0 to 1
+        - when control returns to the caller, the value of a is 
+          copied back into the caller's space, and so value 1
+          is assigned to the variable that was passed to foo,
+          which happens to be global variable x.
+        - variable x has value 1 at the end of the program
+  
+     - pass by reference:
+        - every occurrence of parameter a in foo is in fact an indirection
+          that points to variable x
+        - so, in foo, global x is set to 3. Then it is incremented by one.
+        - then foo returns
+        - variable x has value 4 at the end of the program.
+  
+  - In some sense, in pass-by-value-result, one overwrites the passed parameters
+    when the call returns, so modifications made to them in between (in the
+    above case by modifying global variables) are lost.
+
+- What do real languages do?
+
+     FORTRAN:  inout, does not specify by-reference or by-value-result
+		[there was no such concept back then]
+     ALGOL'60: pass-by-name and pass-by-value
+     ALGOL-W: pass-by-value-result
+     C: pass-by-value (but you can pass an address as a value)
+     Java: pass-by-value (but objects are passed as reference)
+     Pascal: pass-by-value and pass-by-reference
+     Lisp: pass-by-value and pass-by-reference (destructive modification)
+
