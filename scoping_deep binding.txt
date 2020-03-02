@@ -1,0 +1,746 @@
+==========================================
+* Scoping
+==========================================
+
+* Motivation:
+  - Most PLs do not insist on unique names for all variables
+  - Therefore, a program can have different variables with the same name  
+  - Therefore, there needs to be a way to ensure that each name is
+    used unambiguously
+  - scoping provides this 
+   
+* Terminology:
+  - Really a binding question: Each occurrence of a variable name must
+    be bound to a variable definition
+    - can be static and dynamic, as usual
+  - The scope of a variable definition / declaration = regions of the
+    program in which that definition is bound to name occurences
+    (the book talks about about the scope of a variable, which
+     is not a very good terminology)
+  - local variables: variables declared in a program unit (e.g., subprogram)
+                     or a block.
+  - nonlocal variables: variables visible in a program unit or block,
+                        but not declared there
+
+===================================================
+* Explicit scoping: Labeled Namespaces
+===================================================
+
+- Labeled namespace: a language construct that contains definitions and
+  a region of the program where those definitions apply, and also has a
+  name that can be used to access those variables from outside the
+  construct.
+
+- Examples:
+  - C++: namespace
+  - Modula-3: module
+  - Ada: package
+  
+- In OO languages, the definition of a class often serves as
+  a labeled namespace (C++ and Java):
+   - Example:
+       public class A {
+         public static int x;
+       }
+
+      x is visible from any definition in class A, but must be
+      referenced as A.x outside of class A.
+
+- Explicit scoping with namespaces is powerful
+- But it can't solve everything (everything in a namespace
+  basically means unique name for all variables)
+- Ambiguous use of variable names is good for software design and
+  writeability
+
+- The PL system resolves such ambiguity via deterministic scoping rules
+
+===================================================
+* Static scoping  (also called lexical scoping)
+===================================================
+
+- Introduced in ALGOL 60, used in most imperative languages and many
+  non-imperative ones as well.
+- The scope of a definition can be determined at compile time
+- There may be a global scope
+
+- Each subroutine can create its own scope
+
+     int x = 3;
+
+     int main() {
+       f(); 
+     }
+
+     int f() {
+       int x = 3;
+       ... x ...   <--- declaration of x hides the global x
+     }
+
+  - How does this work?
+    - encounter occurrence of 'x'
+    - search local variable declarations
+    - if found: done
+    - otherwise:
+       - search global variable declarations
+       - if found: done
+       - otherwise: error
+    (This is the type of code that the compiler executes to bind variable
+     references to addresses.)
+
+- Each block can create its own scope, and blocks can be nested
+
+    int x=1;
+    main() {
+      x = 3;
+      {
+        int x;
+        {
+          x = 2;
+        }
+        printf("%d\n",x);
+      }
+      printf("%d\n",x);
+      return 0;
+    }
+
+    This program prints?      2    3  
+
+  - How does this work:
+    - encounter occurrence of 'x'
+    - search local variable declarations in block
+    - if found: done
+    - otherwise:
+      - keep searching in parent blocks until found
+      - otherwise search in subprogram's local variables
+        - if found: done
+        - otherwise:
+          - search in global scope
+          - if found: done
+	  - otherwise: error
+    (We will see that this is implemented differently and that
+     the compiler doesn't really do it this way)
+
+- In Java you can put a declaration anywhere in a bock:
+  scope is from the declaration to the end of the block
+
+	int x;
+	{
+	 ... x ...
+	 int x;
+	 ... x ...
+        }
+
+- In C++/Java you can declare a loop variable in a for construct.
+  The scope is the entire for construct. 
+
+         for (int i=0;i++;i<0) { 
+          .. 
+         }
+
+
+- Nested Subprograms: Algol 61, Pascal, Ada, ML
+  - Way to make subprograms visible only to some other subprograms
+
+        Pascal:
+
+          procedure big;
+            var x : integer;
+            procedure sub1;
+              begin {sub1}
+              ... x ... <---- declaration in big
+              end; {sub1} 
+            procedure sub2;
+              var x : integer;  <---- hides the declaration in big
+              begin {sub2}
+               ... x ...
+              end; {sub2}
+            begin {big}
+            ..
+            end; {big}
+
+  -  Terminology: "static parent" procedure in which a
+		  procedure is declared (notion of static ancestor)
+
+  - How does it work? 
+    - sort of like blocks
+      - search in local declaration. if found great.
+      - if not found. go in the static parent. if found great.
+      - if not found. go in the static grandparent. if found great.
+      - etc... up to global scope
+
+- Evaluation:
+  - Static scoping works well in many situations
+  - Some problems with nested subroutines:
+          sub A {     sub B {
+            
+          }           }
+
+    - where to declare a subroutine that needs to access variables in both
+      A and B?
+      - move those variables in the global scope (unsafe)
+        - what if there is already a variable with the same name there?
+  - Tends to encourage the use of global variables, which we know is bad
+    for readability
+    - Solution: encapsulation
+
+=========================================
+* Dynamic scoping
+=========================================
+ 
+- APL, SNOLOB4, early version of LISP
+  - still an option in Lisp, Perl. 
+- Dynamic scoping is based on the calling sequence of subprograms, not on
+  their spatial relationship to each other.
+- The scope can only be determined at run time
+
+     int x;
+
+     int main() {
+       x = 2;
+       f(); 
+       g();
+     }
+
+     void f() {
+       int x = 3;
+       h();
+     }
+
+     void g() {
+       int x = 4;
+       h();
+     }
+
+     void h() {
+       printf("%d\n",x);  
+     }                          
+
+  - Under static scoping:   prints out 2 2 
+  - Under dynamic scoping:  prints out 3 4
+    - calling sequence:  main ---> f ---> h
+      ===> occurence of x in h() is bound to local definition in f();
+    - calling sequence:  main ---> g ---> h
+      ===> occurence of x in h() is bound to local definition in g();
+
+  - The meaning of x cannot be determined at compile time in general:
+        if ( )
+	  f();
+	else
+	  g();
+
+- How does it work?  
+  - at runtime one "searches" for the declaration:
+  - search in local variables
+  - if found: done
+  - otherwise 
+     - search in local variables of the caller
+     - if found: done
+     - otherwise
+	  ....
+
+        - search in global variables
+	- if found: done
+	- otherwise error
+   
+- Nested subprograms
+  - Example from the book:
+
+        procedure big
+          var x: integer; 
+          procedure sub1;
+            begin {sub1}
+              print x;   <----- cannot be determined at run time
+            end; {sub1}
+          procedure sub2;
+            var x: integer;
+            begin {sub2}
+	      x = 10;
+	      sub1();
+            end; {sub2}
+         begin {big}
+	   x = 3;
+	   ....
+	   sub2();
+	   ....
+         end {big}
+
+    - Under static scoping: prints out 3
+    - Under dynamic scoping: prints out 10
+
+- Dynamic Scoping in Common Lisp
+  - special variables: 
+     (defvar *x* 10)    [ Global variable AND dynamic scoping ]
+   
+     (defun foo() (let ((*x* 20)) (bar)))
+
+     (defun bar() (print *x*))
+
+  - From the interpretor:
+
+    > (bar)
+      10
+    > (foo)
+      20
+    > *x*
+      10
+
+  - The Common Lisp programmer expects globals to have dynamic scope and
+    locals to have static scope.
+
+* Lisp Example:
+
+    > (setq x 5)
+    > (defun print_x () x)
+    > (print_x)
+      5
+    > (let ((x 6)) (print_x))
+      5
+
+    > (defvar *x* 5)
+    > (defun print_x () *x*)
+    > (print_x)
+      5
+    > (let ((*x* 6)) (print_x))
+      6
+    > *x*
+      5
+
+* Evaluation:
+  - Good? 
+     1. Can avoid endless passing down of parameters
+           f() {           g(int foo,...) {
+             int foo;        ...
+             g(foo,..)       h(foo,...)
+           }               }
+        - Example: server - pass the client socket descriptor all over
+        - Could be down with Globals, but then the scope is everyone
+
+      2. Makes it possible for local variables to take precedence
+        over global settings.
+
+        - Example:
+            print_int(): prints its argument in different bases
+	                 decimal notation MOST of the time, so
+		         we don't have to keep passing it an explicit
+		         base each time
+
+		NOT void print_int(int x, int base);
+		void print_int(int x);
+
+	    print_integer can obtain its base from a nonlocal variable
+	    called print_base. 
+
+	    	void print_int(int x) {
+                  switch (base) {
+                    case 10:
+		       ...
+                    case 2:
+		       ...
+		  }
+		}
+	    
+	    Set print_base to 10 early in the program, or in a global variable. 
+
+	      int base=10;
+
+              main() {
+                f();
+	        g();
+	      }
+  
+	      void f() {
+                int base = 16;
+	        h();
+	      }
+  
+              void g() {
+                h();
+	      }
+
+	      void h() {
+	        int a;
+	        print_int(a);
+	      }
+  
+	    - Could  be achieved with global variable 
+
+	         (but you need to remember to save the old value
+	          and restore it)
+  
+		    old_value = base;
+		    base = 16;
+		    print_integer(n);
+		    base = old_value;
+
+	       cumbersome and error prone, but one can live with it
+
+	    - Could use two different routines
+
+            - Can be achieved with overloading of the function
+	  	  print_integer(int n);
+		  print_integer(int n, int base);
+
+            - Still, it's "convenient" to override value of global
+              variables for a limited time
+
+	    - Perl does this with the "local" keyboard
+
+		sub visible {
+    		  print "var has value $var\n";
+    		}
+    
+ 		sub dynamic {
+    		  local $var = 'local';
+       		  visible();
+                }
+    
+                sub lexical {
+                  my $var = 'private'; 
+                  visible();
+                }
+             
+                $var = 'global';
+                dynamic(); # prints local
+                lexical(); # prints global
+
+
+  - Bad:
+    - Book: "The effect of dynamic scoping on programming is profound"
+    	      and then moves on to say everything that's BAD
+    - Local variables in subprogram A are visible to anything subprogram
+      while A is active: less information hiding --> less reliability 
+    - Inability to statically type check references to non-local variables
+
+		f() {         g() {           h() {
+                  int x;        char x;         .. x .. ????
+                  h();          h();          }
+		}             }
+
+    - Poor readability: the calling sequence of subprograms must be
+      completely understood to determine the meaning of a reference
+      to nonlocal variables (can be impossible for a large program)
+
+    - In addition, we'll see that implementation is slow
+
+- Modern consensus: Dynamic scoping is probably a bad idea, but we've seen
+  that there can be cool uses. This is why some languages have chosen to
+  provide synamic scoping as an option
+
+============================================
+* Subprograms passed as arguments 
+============================================
+
+- You've seen that LISP can pass functions as arguments
+- C can also do it, but not as elegant
+   void qsort(void *base, size_t nmemb, size_t size,
+              int(*compar)(const void *, const void *));
+
+- Terminology:  referencing environment of a statement = collection of
+  declarations visible from the satement.
+
+        int x;
+          
+        void sub2() {
+          printf("%d\n",x); 
+        }
+
+        void sub4(void(*subx)()) {
+          int x = 4;
+          subx();
+        }
+
+        void sub3() {
+          int x=3;
+          sub4(sub2);
+        }
+
+	main() {
+          x = 1;
+          sub3();
+        }
+
+
+- The question is: What referencing environment is used for the reference
+  to x in sub1?
+
+- Definitions: 
+   - shallow binding: The environment of the call statement that
+                      enacts the passed subprogram (akin to synamic scoping)
+   - deep binding: The environment of the definition of the passed
+                   subprogram (akin to static scoping)
+
+- What does the above program print???
+        shallow binding:  4
+        deep binding:     1
+
+- What do languages do?
+  - Shallow binding: 
+    - doesn't really make sense in statically scoped
+      (would introduce a weird dynamic twist)
+    - typical for dynamically-scoped languages (SNOBOL,
+       default in original LISP)
+  - Deep binding: used by most statically scoped languages.
+
+- Really, it's just applying dynamic and static scoping
+
+===============================================
+* Implementation of scoping 
+===============================================
+
+* The runtime stack
+  - One must do bookkeeping for each subprogram call
+    - local variables
+    - parameters
+    - return address
+    - etc...
+  - This bookkeeping is called an "activation record"
+    - convenient to keep the activation recored on a stack,
+    - with the most recently active subprogram at the top
+
+  - This is the runtime stack
+
+           main() {     g() {           h() {
+             int x;      int y;          int z;
+	     ...x...     ...x...         ...x...
+	     g();        h();          }
+	     ...         ...       
+	   }           }         
+				
+       
+           |     | |     | +-----+ |     | |     |
+           |     | |     | |  h  | |     | |     |
+           |     | +-----+ +-----+ +-----+ +-----+
+           |     | |  g  | |  g  | |  g  | |     |
+           +-----+ +-----+ +-----+ +-----+ +-----+
+           |main | |main | |main | |main | |main |
+           +-----+ +-----+ +-----+ +-----+ +-----+
+	
+  - The AR is where you go look for stack-dynamic variables
+  - Now, it's clear that one needs to navigate the stack,
+    for instance to find value of stack-dynamic variables
+  - Therefore there needs to be pointers connecting activation records 
+	
+  - What is in an activation record?
+
+    low addr 	+-----------------+ <---- Stack pointer (top of stack)
+                | Local variables |          (where you'd put a new AR)
+		+-----------------+
+		| Parameters      |
+		+-----------------+
+		| Dynamic Link    | Points to the fp for the caller
+		+-----------------+
+   <0 offsets	| Static Link     | Points to the fp for the static parent
+		+-----------------+
+		| Return Address  |
+    high addr	+-----------------+ <---- Frame pointer
+
+      - Everything works with an offset
+
+
+      - Example:
+
+      	        +-----------------+
+		|   int z         |
+      	        +-----------------+
+		|   dynamic link  |--+
+     AR for h   +-----------------+  |
+		|   static link   |  |       
+      	        +-----------------+  |       
+		| return to g     |  |       
+      	        +=================+  |       
+		|   int y         |  |       
+      	        +-----------------+  |       
+		|   dynamic link  |--|-+     
+     AR for g   +-----------------+  | |     
+		|   static link   |  | |     
+      	        +-----------------+  | |     
+		| return to f     |  | |     
+      	        +=================+<-+ |     
+		|   int x         |    |     
+    AR for main +=================+<---+     
+
+
+  - Static links are set when there are nested subroutines: 
+
+     Pascal:
+        procedure big
+          var x: integer;
+          procedure sub2;
+            var y: integer;
+            procedure sub1;
+              var z: integer;
+              begin {sub1}
+                ...x...
+                sub1();
+              end; {sub1}
+            begin {sub2}
+              sub1();
+            end; {sub2}
+         begin {big}
+           ....
+           sub2();
+           ....
+         end {big}
+
+ 
+                +-----------------+
+                |      int z      |
+                +-----------------+
+   AR for sub1  |  dynamic link   |------+
+                +-----------------+      |
+                |  static link    |------+-------+
+                +-----------------+      |       |
+                |  return to sub1 |      |       |
+      	        +=================+      |       |
+		|   int z         |      |       |
+      	        +-----------------+      |       |
+		|   dynamic link  |--+   |       |
+  AR for sub1   +-----------------+  |   |       |
+		|   static link   |--+---+-+     |
+      	        +-----------------+  |   | |     |
+		| return to sub2  |  |   | |     |
+      	        +=================+<-+---+ |     | 
+		|   int y         |  |     |     |
+      	        +-----------------+  |     |     |
+		|   dynamic link  |--|-+   |     |
+  AR for sub2   +-----------------+  | |   |     |
+		|   static link   |--+-+---+-+   |
+      	        +-----------------+  | |   | |   |
+		|   return to big |  | |   | |   |
+      	        +=================+<-+-|---+-+---+
+		|   int x         |    |     |    
+    AR for big  +=================+<---+-----+
+
+
+* Implementing static scoping
+  - Follow static pointers: called "the static chain"
+  - dynamic pointer just used to pop AR off stack
+  - The length of the static chain can be known at compile time!
+  - One can compute a static depth: how deeply is a routine nested
+  - length of static chain = static depth of (reference) -
+                             static depth of (declaration)
+
+  - In the 2nd example: 
+       static_depth(sub1) = 2
+       static_depth(sub2) = 1
+       static_depth(big) = 0
+
+       Reference to x in sub1:
+
+       static_chain_length = 
+      	  static_depth(sub1) - static depth of(big) = 2:
+
+       Determined at compile time: The reference for x in sub1
+       is to be found in the AR that's 2 static links away.
+
+    - Several performance issues:
+	- Cost to access non-local variables: 
+            must follow pointers, which can be expensive for many
+             nesting levels
+
+    - Displays: alternative implementation (see book)
+      - hack to remove the variable cost of static link following
+      - better for deeply nested 
+        - otherwise following the static chain is ok
+    - Static depth rarely exceeds 3 in practice
+
+  - How to deal with blocks?
+    - Could be treated as subprograms: they are parameterless subprograms
+      with no return value
+    - typically, implemented differently, more simply
+    - The maximum amount of storage needed for block variables
+      is determined statically. 
+    - Block variables are allocated on the stack along with local variables.
+ 
+          void f() {
+            int x,y,z;
+            {
+              int a,b,c; <----- Require 3
+              {
+                int d,e; <------ Require 3+2 = 5
+              }
+            }
+            {
+              int f,g; <-------- Require 2
+            }
+          }
+
+          max(3,2,5) = 5
+
+      	        +-----------------+
+                |        e        |
+      	        +-----------------+
+                |        d        |
+      	        +-----------------+
+                |        c        | Block variables
+      	        +-----------------+
+                |      b or g     |
+      	        +-----------------+
+                |      a or f     |
+      	        +-----------------+ 
+                |        z        |
+      	        +-----------------+
+                |        y        |   Locals
+      	        +-----------------+
+                |        x        |
+      	        +-----------------+
+
+      - One can compute a fixed offset for each variable
+
+* Implementing Dynamic Scoping
+  - Follow dynamic pointers: called "the dynamic chain"
+  - Must be done a runtime (no way to precompute the length)
+  - Called "deep access"
+
+    Example:
+
+       void main () {
+         int x;
+       }
+       void foo() {
+         bar();
+       }
+       void bar() {
+         stuff();
+       }
+       voif stuff() {
+         ... x ...
+       }
+
+      	        +=================+ 
+		|   dynamic link  |---+
+  AR for stuff  +-----------------+   |
+		|   static link   |   |
+      	        +-----------------+   |
+		| return to bar   |   |
+      	        +=================+   |
+		|   dynamic link  |---+--+
+  AR for bar    +-----------------+   |  |
+		|   static link   |   |  |
+      	        +-----------------+   |  |
+		| return to foo   |   |  |
+      	        +=================+<--+  |
+		|   dynamic link  |---+  |
+  AR for foo    +-----------------+   |  |
+		|   static link   |   |  |
+      	        +-----------------+   |  |
+		|  return to main |   |  |
+      	        +=================+<--+--+
+		|   int x         |   |
+    AR for main +=================+<--+
+
+  - Problems:
+    - SLOW: The dynamic chain can be very long!
+    - Cumbersome: each AR must store NAMES of variables (as opposed to
+          just an offset that the compiler can pre-compile)
+
+    - Alternative access: shallow access 
+      - Maintain a stack per variable name!
+	 - fast to implement
+         - may require a large stack  (see book)
+                       
+    - More complicated things in the book and in compilation text
+
+  - Note that if you write an interpreter for the language, you would need
+    to implement your own stack data structure, your own activation record
+    structure, and set up all the static link and dynamic links yourself.
